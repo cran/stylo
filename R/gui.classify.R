@@ -10,7 +10,6 @@
 
 
 
-
 # #################################################
 # Function for displaying simple yet effective graphical interface (GUI).
 # If you execute this option, the values stored in the function 
@@ -110,6 +109,7 @@ mfw.list.cutoff = variables$mfw.list.cutoff
 mfw.max = variables$mfw.max
 mfw.min = variables$mfw.min
 ngram.size = variables$ngram.size
+preserve.case = variables$preserve.case
 number.of.candidates = variables$number.of.candidates
 outputfile = variables$outputfile
 passed.arguments = variables$passed.arguments
@@ -152,12 +152,10 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
   .Tcl("font create myDefaultFont -family tahoma -size 8")
   .Tcl("option add *font myDefaultFont")  
   
-    cancel_pause <- FALSE
     tt <- tktoplevel()
     tktitle(tt) <- "Stylometry with R: enter analysis parameters"
     
     push_OK <- function(){
-        cancel_pause <<- TRUE
         tkdestroy(tt)
         }
   
@@ -170,6 +168,7 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
   culling.max <- tclVar(culling.max)
   culling.incr <- tclVar(culling.incr)
   ngram.size <- tclVar(ngram.size)
+  preserve.case <- tclVar(preserve.case)
   analyzed.features <- tclVar(analyzed.features)
   use.existing.freq.tables <- tclVar(use.existing.freq.tables)
   use.existing.wordlist <- tclVar(use.existing.wordlist)
@@ -202,7 +201,6 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
   length.of.random.sample <- tclVar(length.of.random.sample)
   consensus.strength <- tclVar(consensus.strength)
   dump.samples <- tclVar(dump.samples)
-  
   f1 <- tkframe(tt)
   f2 <- tkframe(tt)
   f3 <- tkframe(tt)
@@ -405,21 +403,26 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
   entry_L <- tkradiobutton(f2)
   cb_NGRAMS <- tkcheckbutton(f2)
   entry_NGRAMSIZE <- tkentry(f2,textvariable=ngram.size,width="8")
+  cb_PRESERVECASE <- tkcheckbutton(f2)
+
   #
   tkconfigure(entry_W,variable=analyzed.features,value="w")
   tkconfigure(entry_L,variable=analyzed.features,value="c")
+  tkconfigure(cb_PRESERVECASE,variable=preserve.case)
   #
   entrylabel_W <- tklabel(f2,text="words")
   entrylabel_L <- tklabel(f2,text="chars")
   entrylabel_NGRAMSIZE <- tklabel(f2,text="ngram size")
+  entrylabel_PRESERVECASE <- tklabel(f2,text="preserve case")
   #
-  tkgrid(tklabel(f2,text="        FEATURES:"),entrylabel_W,entrylabel_L,entrylabel_NGRAMSIZE)
-  tkgrid(tklabel(f2,text="                 "),entry_W,entry_L,entry_NGRAMSIZE)
+  tkgrid(tklabel(f2,text="        FEATURES:"),entrylabel_W,entrylabel_L,entrylabel_NGRAMSIZE, entrylabel_PRESERVECASE)
+  tkgrid(tklabel(f2,text="                 "),entry_W,entry_L,entry_NGRAMSIZE, cb_PRESERVECASE)
   
   # Tooltips for the above
   tk2tip(entrylabel_W, "Select this to work on words")
   tk2tip(entrylabel_L, "Select this to work on characters \n(does not make much sense unless you use ngrams)")
   tk2tip(entrylabel_NGRAMSIZE, "State your n for n-grams \nto work on word/char clusters of n")
+  tk2tip(entrylabel_PRESERVECASE, "Whether or not to lowercase all characters")
   tkgrid(tklabel(f2,text="    ")) # blank line for aesthetic purposes
   
   # next row: MFW SETTINGS
@@ -726,52 +729,51 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
   tkgrid(tklabel(tt,text="    ")) # blank line (i.e., bottom margin)
   
   
-  ##########
+  # wait until we have input
+  tkwait.window(tt)
   
-  repeat{
-    if(cancel_pause){
-      variables$analyzed.features = as.character(tclvalue(analyzed.features))
-      variables$ngram.size = as.numeric(tclvalue(ngram.size))
-      variables$corpus.format = as.character(tclvalue(corpus.format))
-      variables$mfw.min = as.numeric(tclvalue(mfw.min))
-      variables$mfw.max = as.numeric(tclvalue(mfw.max))
-      variables$mfw.incr = as.numeric(tclvalue(mfw.incr))
-      variables$start.at = as.numeric(tclvalue(start.at))
-      variables$culling.min = as.numeric(tclvalue(culling.min))
-      variables$culling.max = as.numeric(tclvalue(culling.max))
-      variables$culling.incr = as.numeric(tclvalue(culling.incr))
-      variables$use.existing.freq.tables = as.logical(as.numeric(tclvalue(use.existing.freq.tables)))
-      variables$use.existing.wordlist = as.logical(as.numeric(tclvalue(use.existing.wordlist)))
-      variables$interactive.files = as.logical(as.numeric(tclvalue(interactive.files)))
-      variables$use.custom.list.of.files = as.logical(as.numeric(tclvalue(use.custom.list.of.files)))
-      variables$classification.method = as.character(tclvalue(classification.method))
-      variables$culling.of.all.samples = as.logical(as.numeric(tclvalue(culling.of.all.samples)))
-      variables$reference.wordlist.of.all.samples = as.logical(as.numeric(tclvalue(reference.wordlist.of.all.samples)))
-      variables$z.scores.of.all.samples = as.logical(as.numeric(tclvalue(z.scores.of.all.samples)))
-      variables$number.of.candidates = as.numeric(tclvalue(number.of.candidates))
-      variables$final.ranking.of.candidates = as.logical(as.numeric(tclvalue(final.ranking.of.candidates)))
-      variables$how.many.correct.attributions = as.logical(as.numeric(tclvalue(how.many.correct.attributions)))
-      variables$delete.pronouns = as.logical(as.numeric(tclvalue(delete.pronouns)))
-      variables$dump.samples = as.logical(as.numeric(tclvalue(dump.samples)))
-      variables$save.distance.tables = as.logical(as.numeric(tclvalue(save.distance.tables)))
-      variables$save.analyzed.features = as.logical(as.numeric(tclvalue(save.analyzed.features)))
-      variables$save.analyzed.freqs = as.logical(as.numeric(tclvalue(save.analyzed.freqs)))
-      variables$sampling = as.character(tclvalue(sampling))
-      variables$sample.size = as.numeric(tclvalue(sample.size))
-      variables$length.of.random.sample = as.numeric(tclvalue(length.of.random.sample))
-      variables$mfw.list.cutoff = as.numeric(tclvalue(mfw.list.cutoff))
-      variables$distance.measure = as.character(tclvalue(distance.measure))
-      variables$corpus.lang = as.character(tclvalue(corpus.lang))
-      variables$consensus.strength = as.numeric(tclvalue(consensus.strength))
-      variables$k.value = as.numeric(tclvalue(k.value))
-      variables$l.value = as.numeric(tclvalue(l.value))
-      variables$svm.kernel = as.character(tclvalue(svm.kernel))
-      variables$svm.degree = as.numeric(tclvalue(svm.degree))      
-      variables$svm.coef0 = as.numeric(tclvalue(svm.coef0))
-      variables$svm.cost = as.numeric(tclvalue(svm.cost))
-    break
-    }
+  variables$analyzed.features = as.character(tclvalue(analyzed.features))
+  variables$ngram.size = as.numeric(tclvalue(ngram.size))
+  variables$corpus.format = as.character(tclvalue(corpus.format))
+  variables$preserve.case = as.logical(as.numeric(tclvalue(preserve.case)))
+  variables$mfw.min = as.numeric(tclvalue(mfw.min))
+  variables$mfw.max = as.numeric(tclvalue(mfw.max))
+  variables$mfw.incr = as.numeric(tclvalue(mfw.incr))
+  variables$start.at = as.numeric(tclvalue(start.at))
+  variables$culling.min = as.numeric(tclvalue(culling.min))
+  variables$culling.max = as.numeric(tclvalue(culling.max))
+  variables$culling.incr = as.numeric(tclvalue(culling.incr))
+  variables$use.existing.freq.tables = as.logical(as.numeric(tclvalue(use.existing.freq.tables)))
+  variables$use.existing.wordlist = as.logical(as.numeric(tclvalue(use.existing.wordlist)))
+  variables$interactive.files = as.logical(as.numeric(tclvalue(interactive.files)))
+  variables$use.custom.list.of.files = as.logical(as.numeric(tclvalue(use.custom.list.of.files)))
+  variables$classification.method = as.character(tclvalue(classification.method))
+  variables$culling.of.all.samples = as.logical(as.numeric(tclvalue(culling.of.all.samples)))
+  variables$reference.wordlist.of.all.samples = as.logical(as.numeric(tclvalue(reference.wordlist.of.all.samples)))
+  variables$z.scores.of.all.samples = as.logical(as.numeric(tclvalue(z.scores.of.all.samples)))
+  variables$number.of.candidates = as.numeric(tclvalue(number.of.candidates))
+  variables$final.ranking.of.candidates = as.logical(as.numeric(tclvalue(final.ranking.of.candidates)))
+  variables$how.many.correct.attributions = as.logical(as.numeric(tclvalue(how.many.correct.attributions)))
+  variables$delete.pronouns = as.logical(as.numeric(tclvalue(delete.pronouns)))
+  variables$dump.samples = as.logical(as.numeric(tclvalue(dump.samples)))
+  variables$save.distance.tables = as.logical(as.numeric(tclvalue(save.distance.tables)))
+  variables$save.analyzed.features = as.logical(as.numeric(tclvalue(save.analyzed.features)))
+  variables$save.analyzed.freqs = as.logical(as.numeric(tclvalue(save.analyzed.freqs)))
+  variables$sampling = as.character(tclvalue(sampling))
+  variables$sample.size = as.numeric(tclvalue(sample.size))
+  variables$length.of.random.sample = as.numeric(tclvalue(length.of.random.sample))
+  variables$mfw.list.cutoff = as.numeric(tclvalue(mfw.list.cutoff))
+  variables$distance.measure = as.character(tclvalue(distance.measure))
+  variables$corpus.lang = as.character(tclvalue(corpus.lang))
+  variables$consensus.strength = as.numeric(tclvalue(consensus.strength))
+  variables$k.value = as.numeric(tclvalue(k.value))
+  variables$l.value = as.numeric(tclvalue(l.value))
+  variables$svm.kernel = as.character(tclvalue(svm.kernel))
+  variables$svm.degree = as.numeric(tclvalue(svm.degree))  
+  variables$svm.coef0 = as.numeric(tclvalue(svm.coef0))
+  variables$svm.cost = as.numeric(tclvalue(svm.cost))
+
   .Tcl("font delete myDefaultFont")
-  }
+
 return(variables)
 }
