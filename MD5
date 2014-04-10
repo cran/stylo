@@ -1,10 +1,10 @@
-f867b2f8f2ec84a8bb02a5ebbd104c1b *DESCRIPTION
+cff9894308ba6d60c26509b7cc851aab *DESCRIPTION
 8b4436ed30b373571e08fba7f6f92436 *NAMESPACE
 98926c5923fadfd22e47133342a76512 *NEWS
 c4d6f56df268cfa43deae06bd6a96a3a *R/assign.plot.colors.R
 1ab3bffc4f4f52f92af564b5aadd96a3 *R/classify.R
 4998aa573c5bbff70a78b2c7091589ab *R/define.plot.area.R
-e8be234cf6714110b90dcf323043236b *R/delete.markup.R
+2bdf2a4c2fd2d9a88537a69e68d59359 *R/delete.markup.R
 83dfc3ef190610eab518537d7378ffb5 *R/gui.classify.R
 35922bdc621dd88f5bd09504695477d3 *R/gui.stylo.R
 fa2baedf4e8997040e70f50a07493b90 *R/load.corpus.R
@@ -19,12 +19,12 @@ f8e17ee54ca75707164adacd028a3662 *R/make.ngrams.R
 cc0545fbe391a907fbcdf29916427f6f *R/rolling.delta.R
 931892e62ac1a2e701e182d640e0880d *R/stylo.R
 5ad6859c9ea6968ee8960e847b773919 *R/stylo.default.settings.R
-93678bef900526eba9e1295195b94964 *R/stylo.pronouns.R
+27cb318505baddcc076fc922dd1305db *R/stylo.pronouns.R
 23410f29267325305c90ddda81294760 *R/summary.stylo.corpus.R
 a19dda52d1add5df8182c5470ccf71cf *R/summary.stylo.results.R
 f9a31a0198707dab7ebd910035fe7e0f *R/txt.to.features.R
 a06bd8f7bd48d892517dd1cdc240491c *R/txt.to.words.R
-9deee2b1dba483b0605415d23041b4f8 *R/txt.to.words.ext.R
+f4a42e75dd82546c97cee0607299b0bf *R/txt.to.words.ext.R
 0c7fa0e55edcc546113807cdee0fe973 *inst/CITATION
 f1b74581871080199b62e60bb05f85b7 *man/assign.plot.colors.Rd
 9dfb5ea16b2ee874df477b26302c58c4 *man/classify.Rd
