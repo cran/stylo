@@ -144,6 +144,7 @@ z.scores.of.all.samples = variables$z.scores.of.all.samples
 relative.frequencies = variables$relative.frequencies
 splitting.rule = variables$splitting.rule
 preserve.case = variables$preserve.case
+encoding = variables$encoding
 
 cv = variables$cv
 cv.folds = variables$cv.folds
@@ -311,7 +312,7 @@ features.exist = FALSE
       if(is.vector(features) == TRUE) {
         # if yes, then convert the above object into characters, just in case
         features = as.character(features)
-        # link the table into the variable used for calculations
+        # link this vector into the variable used for calculations
         mfw.list.of.all = features
       } else {
         cat("\n")
@@ -319,7 +320,7 @@ features.exist = FALSE
         cat("Unfortunately, something is wrong: check if your variable\n")
         cat("has a form of vector\n")
         cat("\n")
-        stop("Wrong format: a vector of features was expected")
+        stop("Wrong format: a vector of features (e.g. words) was expected")
       }
     # selecting the above vector as a valid set of features
     features.exist = TRUE
@@ -334,7 +335,7 @@ features.exist = FALSE
         # file with a vector of features will be loaded
         cat("\n", "reading a custom set of features from a file...", "\n",sep="")
         # reading a file: newlines are supposed to be delimiters
-        features = scan(features,what="char",sep="\n")
+        features = scan(features,what="char",sep="\n",encoding=encoding)
         # getting rid of the lines beginning with the "#" char
         features = c(grep("^[^#]",features,value=TRUE))
       } else {
@@ -405,7 +406,7 @@ for(iteration in 1:2) {
       if(file.exists(frequencies) == TRUE) {
         # file with frequencies will be loaded
         cat("\n", "reading a file containing frequencies...", "\n",sep="")
-        frequencies = t(read.table(frequencies))
+        frequencies = t(read.table(frequencies, encoding=encoding))
       } else {
         # if there's no such a file, then don't try to use it
         cat("\n", "file \"",frequencies, "\" could not be found\n",sep="")
@@ -592,6 +593,7 @@ if(corpus.exists == FALSE) {
   # loading text files, splitting, parsing, n-gramming, samping, and so forth
   corpus.of.primary.set = load.corpus.and.parse(files = filenames.primary.set,
                          corpus.dir = training.corpus.dir,
+                         encoding = encoding,
                          markup.type = corpus.format,
                          language = corpus.lang,
                          splitting.rule = splitting.rule,
@@ -605,6 +607,7 @@ if(corpus.exists == FALSE) {
   # loading text files: test set
   corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
                          corpus.dir = test.corpus.dir,
+                         encoding = encoding,
                          markup.type = corpus.format,
                          language = corpus.lang,
                          splitting.rule = splitting.rule,
@@ -703,7 +706,15 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
       "# -----------------------------------------------------------------------",
       "", file="wordlist.txt", sep="\n")
     # the current wordlist into a file
-    cat(mfw.list.of.all, file="wordlist.txt", sep="\n",append=F)
+      # checking if encoding conversion is needed
+      if(encoding == "native.enc") {
+        data.to.be.saved = mfw.list.of.all
+      } else {
+        data.to.be.saved = iconv(mfw.list.of.all, to=encoding)
+      }
+  # writing the stuff
+  cat(data.to.be.saved,file="wordlist.txt", sep="\n",append=T)
+      
     
   }   # <----- conditional expr. if(features.exist == TRUE) terminates here
 
@@ -725,16 +736,30 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
                             relative = relative.frequencies)
 
   # writing the frequency tables to text files (they can be re-used!)
-  write.table(t(freq.I.set.0.culling), 
-              file="freq_table_primary_set.txt", 
-              sep="\t",
-              row.names=TRUE,
-              col.names=TRUE)
-  write.table(t(freq.II.set.0.culling), 
-              file="freq_table_secondary_set.txt", 
-              sep="\t",
-              row.names=TRUE,
-              col.names=TRUE)
+  # first, the training set
+      # checking if any re-encoding is needed 
+      if(encoding == "native.enc") {
+        data.to.be.saved = t(freq.I.set.0.culling)
+      } else {
+        data.to.be.saved = t(freq.I.set.0.culling)
+        rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+        colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+      }
+  # writing the stuff
+  write.table(data.to.be.saved, file = "freq_table_primary_set.txt")
+
+  # now, the test set
+      # checking if any re-encoding is needed 
+      if(encoding == "native.enc") {
+        data.to.be.saved = t(freq.II.set.0.culling)
+      } else {
+        data.to.be.saved = t(freq.II.set.0.culling)
+        rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+        colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+      }
+  # writing the stuff
+  write.table(data.to.be.saved, file = "freq_table_secondary_set.txt")
+
   
 }
 ###############################################################################
@@ -772,6 +797,7 @@ var.name <- function(x) {
  var.name(mfw.list.cutoff)
  var.name(delete.pronouns)
  var.name(preserve.case)
+ var.name(encoding)
  var.name(use.existing.freq.tables)
  var.name(use.existing.wordlist)
  var.name(classification.method)
@@ -1479,6 +1505,56 @@ if(exists("cross.validation.results.all")) {
 
 
 
+# saving a requested stuff into external files
+
+# writing distance table(s) to a file (if an appropriate option has been chosen)
+if(save.distance.tables == TRUE && exists("distance.table") == TRUE) {
+  distance.table.filename = paste("distance_table_",mfw,"mfw_",current.culling,"c.txt",sep="")
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = distance.table
+    } else {
+      data.to.be.saved = distance.table
+      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+    }
+  # writing the stuff
+  write.table(file=distance.table.filename, data.to.be.saved)
+}
+
+# writing the words (or features) actually used in the analysis
+##features.actually.used = colnames(table.with.all.freqs[,1:mfw])
+features.actually.used = list.of.words.after.culling[start.at : mfw.max]
+#
+if(save.analyzed.features == TRUE) {
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = features.actually.used
+    } else {
+      data.to.be.saved = iconv(features.actually.used, to=encoding)
+    }
+  # writing the stuff
+  cat(data.to.be.saved,
+     file=paste("features_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""),
+     sep="\n")
+}
+
+# writing the frequency table that was actually used in the analysis
+if(save.analyzed.freqs == TRUE) {
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = t(freq.table.both.sets[,1:mfw])
+    } else {
+      data.to.be.saved = t(freq.table.both.sets[,1:mfw])
+      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+    }
+  # writting the stuff -- the file name will be changed accordingly
+  write.table(data.to.be.saved,
+     file=paste("frequencies_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""))
+}
+
+
 
 
 }    # <-- the internal loop for(i) returns here
@@ -1568,7 +1644,7 @@ if(exists("misclassified.samples")) {
 }
 if(exists("cross.validation.summary") & length(cross.validation.summary) >0 ) {
   attr(cross.validation.summary, "description") = "correctly guessed samples (cross-validation folds)"
-  class(cross.validation.summary) = "stylo.data"
+  class(cross.validation.summary) = c("stylo.data", "matrix")
 }
 if(exists("success.rate")) {
   attr(success.rate, "description") = "percentage of correctly guessed samples"

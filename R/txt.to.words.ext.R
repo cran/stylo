@@ -33,7 +33,12 @@ function(input.text,
   } else {
     # Loading the file; optionally, fiddling with apostrophes and contractions:    #
     # This is the standard procedure of splitting input texts
-    if(language != "English.contr" & language != "English.all") {
+    if(language == "CJK") {
+      tokenized.text = txt.to.words(input.text, 
+                                    splitting.rule="[^\U4E00-\U9FFF]+",
+                                    preserve.case=TRUE)
+      }
+    if(language != "English.contr" & language != "English.all" & language != "CJK") {
       tokenized.text = txt.to.words(input.text, preserve.case=preserve.case)
     }
     # if the Latin option with adjusting the v/u letters is on,
@@ -60,18 +65,18 @@ function(input.text,
       # depending on which option was swithed on, either the contractions are
       # kept, or all the peculiarities, i.e. both contractions and hyphens
         if(language == "English.contr") {
-          tokenized.text=c(unlist(strsplit(tokenized.text,"[^[:alpha:]^]+")))
+          tokenized.text=c(unlist(strsplit(tokenized.text,
+                    "[^A-Za-z\U00C0-\U00FF\U0100-\U01BF\U01C4-\U02AF^]+")))
         }
         if(language == "English.all") {
-          tokenized.text=c(unlist(strsplit(tokenized.text,"[^[:alpha:]^-]+")))
+          tokenized.text=c(unlist(strsplit(tokenized.text,
+                    "[^A-Za-z\U00C0-\U00FF\U0100-\U01BF\U01C4-\U02AF^-]+")))
           # trying to clean the remaining dashes:
           tokenized.text = gsub("^[-]+$","",tokenized.text)
         }
     }
     # trying to avoid empty strings:
     tokenized.text = tokenized.text[nchar(tokenized.text)>0]
-    # trying to get rid of non-letter characters:
-    tokenized.text = tokenized.text[grep("[^[:digit:]]",tokenized.text)]
     #
   }
 return(tokenized.text)

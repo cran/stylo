@@ -18,38 +18,48 @@ function(x, ...) {
     x = round(x,7)
       if(no.of.variables >11 ) {
         x = x[,1:11]
-        x = as.data.frame(cbind(x,rep("...")),stringsAsFactors=F)
-        colnames(x)[12] = "        "
+        x = cbind(x,rep("..."))
+        colnames(x)[12] = " "
       }
       if(no.of.samples >10 ) {
         x = x[1:10,]
-        x = as.data.frame(rbind(x,rep("...")),stringsAsFactors=F)
-       rownames(x)[11] = "        "
+        x = rbind(x,rep("..."))
+       rownames(x)[11] = " "
       }
     # to avoid printing recursively the object x, let's print its "part"
-    print(x[,])
+    print(x, quote=FALSE)
     cat("\n")
     cat("(total number of rows/columns:  ",no.of.samples, "/",
         no.of.variables, ")\n", sep="")
     cat("\n")  
   } else if(is.character(x) == TRUE) {
     no.of.elements = length(x)
-      if(no.of.elements > 999) {
-        x = x[1:999]
+      if(no.of.elements > 1000) {
+        x = x[1:1000]
       }
-    # first element's number
-    cat(format("[1]",width=7))
+    # analyzing the optimal width of columns
+    # margin between columns
+    column.gutter = 2
+    # space needed to fit the longest item + margin
+    column.width = max(nchar(x)) + column.gutter
+    # estimating the number of columns needed
+    no.of.columns = floor( (options()$width - 7) / column.width)
+    # formatting particular items (C++ style)
+    column.format = paste("%-", column.width, "s", sep="")
+    #
+    # first element's number (formatted to have at least 7 characters)
+    cat(sprintf("%7s", "[1]  "))
     # first element
-    cat(format(x[1],width=15))
+    cat(sprintf(column.format, x[1]))
     # next elements
     for(i in 1:(length(x)-1) ) {
-        # a newline and a number every 4th element
-        if((i/4) == floor(i/4) ) { 
+        # a newline and a number at the beginning of each line
+        if((i/no.of.columns) == floor(i/no.of.columns) ) { 
           cat("\n")
-          cat(format(paste("[",i+1,"]  ",sep=""),width=7))
+          cat(sprintf("%7s", paste("[",i+1,"]  ",sep="")))
         }
       # the subsequent elements of the vector
-    cat(format(x[i+1],width=15))
+    cat(sprintf(column.format, x[i+1] ))
     }
     cat("\n")
     cat("\n")

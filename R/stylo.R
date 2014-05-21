@@ -158,7 +158,7 @@ edge.weights = variables$edge.weights
 relative.frequencies = variables$relative.frequencies
 splitting.rule = variables$splitting.rule
 preserve.case = variables$preserve.case
-
+encoding = variables$encoding
 
 
 
@@ -243,14 +243,6 @@ if(txm.compatibility.mode == TRUE) {
     use.existing.wordlist = FALSE
   }
 ###############################################################################
-# sanity check: if an appropriate argument has been used, pipe it to "frequencies"
-#  if( length(frequencies) == 0 & length(training.frequencies) > 0 ) {
-#    frequencies = training.frequencies
-#  }
-#  if( length(frequencies) == 0 & length(test.frequencies) > 0 ) {
-#    frequencies = test.frequencies
-#  }
-###############################################################################
 
 
 
@@ -308,20 +300,6 @@ if(write.jpg.file == TRUE || write.png.file == TRUE){
  
 
 
-# #################################################
-# the module for loading a corpus from the text files;
-# it can be omitted if the frequency table already exists
-# (then "use.existing.freq.tables" should be set 
-# to TRUE in the preamble of the script/GUI)
-# #################################################
-#
-# Checking: (1) whether to produce a new frequency table or to use 
-# the existing one; (2) whether the tables are stored in memory or 
-# written into files.
-# If you have chosen using the existing table and it does not exist,
-# then your choice will be ignored and the table will be 
-# created from scratch.
-
 
 
 ###############################################################################
@@ -336,7 +314,7 @@ features.exist = FALSE
       if(is.vector(features) == TRUE) {
         # if yes, then convert the above object into characters, just in case
         features = as.character(features)
-        # link the table into the variable used for calculations
+        # link this vector into the variable used for calculations
         mfw.list.of.all = features
       } else {
         cat("\n")
@@ -344,7 +322,7 @@ features.exist = FALSE
         cat("Unfortunately, something is wrong: check if your variable\n")
         cat("has a form of vector\n")
         cat("\n")
-        stop("Wrong format: a vector of features was expected")
+        stop("Wrong format: a vector of features (e.g. words) was expected")
       }
     # selecting the above vector as a valid set of features
     features.exist = TRUE
@@ -359,7 +337,7 @@ features.exist = FALSE
         # file with a vector of features will be loaded
         cat("\n", "reading a custom set of features from a file...", "\n",sep="")
         # reading a file: newlines are supposed to be delimiters
-        features = scan(features,what="char",sep="\n")
+        features = scan(features,what="char",sep="\n",encoding=encoding)
         # getting rid of the lines beginning with the "#" char
         features = c(grep("^[^#]",features,value=TRUE))
       } else {
@@ -415,7 +393,7 @@ corpus.exists = FALSE
       if(file.exists(frequencies) == TRUE) {
         # file with frequencies will be loaded
         cat("\n", "reading a file containing frequencies...", "\n",sep="")
-        frequencies = t(read.table(frequencies))
+        frequencies = t(read.table(frequencies, encoding=encoding))
       } else {
         # if there's no such a file, then don't try to use it
         cat("\n", "file \"",frequencies, "\" could not be found\n",sep="")
@@ -534,7 +512,11 @@ if(corpus.exists == FALSE) {
         cat("\n")
         cat("external list of files will be used for uploading the corpus\n\n")
         # retrieving the filenames from a file
-        corpus.filenames = scan("files_to_analyze.txt",what="char",sep="\n",quiet=T)
+        corpus.filenames = scan("files_to_analyze.txt",
+                                what="char",
+                                sep="\n",
+                                encoding=encoding,
+                                quiet=T)
         # getting rid of spaces and/or tabs
         corpus.filenames = unlist(strsplit(corpus.filenames,"[ \t]+"))
           # checking whether all the files indicated on the list really exist
@@ -596,6 +578,7 @@ if(corpus.exists == FALSE) {
   # loading text files, splitting, parsing, n-gramming, samping, and so forth
   loaded.corpus = load.corpus.and.parse(files = corpus.filenames,
                          corpus.dir = corpus.dir,
+                         encoding = encoding,
                          markup.type = corpus.format,
                          language = corpus.lang,
                          splitting.rule = splitting.rule,
@@ -674,7 +657,15 @@ if(exists("frequencies.0.culling") == FALSE) {
       "# -----------------------------------------------------------------------",
       "", file="wordlist.txt", sep="\n")
     # the current wordlist into a file
-    cat(mfw.list.of.all, file="wordlist.txt", sep="\n",append=T)
+      # checking if encoding conversion is needed
+      if(encoding == "native.enc") {
+        data.to.be.saved = mfw.list.of.all
+      } else {
+        data.to.be.saved = iconv(mfw.list.of.all, to=encoding)
+      }
+  # writing the stuff
+  cat(data.to.be.saved,file="wordlist.txt", sep="\n",append=T)
+
 
   }   # <----- conditional expr. if(features.exist == TRUE) terminates here
 
@@ -700,11 +691,14 @@ if(exists("frequencies.0.culling") == FALSE) {
 
 
   # writing the table with frequencies to a text file (it can be re-used!)
-  write.table( t(frequencies.0.culling), 
-              file = "table_with_frequencies.txt", 
-              sep = "\t",
-              row.names = TRUE,
-              col.names = TRUE)
+      if(encoding == "native.enc") {
+        data.to.be.saved = t(frequencies.0.culling)
+      } else {
+        data.to.be.saved = t(frequencies.0.culling)
+        rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+        colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+      }
+  write.table(data.to.be.saved, file = "table_with_frequencies.txt")
 
 }
 ###############################################################################
@@ -736,6 +730,7 @@ var.name(corpus.lang)
 var.name(analyzed.features)
 var.name(ngram.size)
 var.name(preserve.case)
+var.name(encoding)
 var.name(mfw.min)
 var.name(mfw.max)
 var.name(mfw.incr)
@@ -1413,21 +1408,46 @@ if(analysis.type != "BCT") {
 # writing distance table(s) to a file (if an appropriate option has been chosen)
 if(save.distance.tables == TRUE && exists("distance.table") == TRUE) {
   distance.table.filename = paste("distance_table_",mfw,"mfw_",current.culling,"c.txt",sep="")
-  write.table(file=distance.table.filename, distance.table)
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = distance.table
+    } else {
+      data.to.be.saved = distance.table
+      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+    }
+  # writing the stuff
+  write.table(file=distance.table.filename, data.to.be.saved)
 }
 
 # writing the words (or features) actually used in the analysis
 features.actually.used = colnames(table.with.all.freqs[,1:mfw])
 #
 if(save.analyzed.features == TRUE) {
-  cat(features.actually.used,
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = features.actually.used
+    } else {
+      data.to.be.saved = iconv(features.actually.used, to=encoding)
+    }
+  # writing the stuff
+  cat(data.to.be.saved,
      file=paste("features_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""),
      sep="\n")
 }
 
 # writing the frequency table that was actually used in the analysis
 if(save.analyzed.freqs == TRUE) {
-  write.table(table.with.all.freqs[,1:mfw],
+    # checking if encoding conversion is needed
+    if(encoding == "native.enc") {
+      data.to.be.saved = t(table.with.all.freqs[,1:mfw])
+    } else {
+      data.to.be.saved = t(table.with.all.freqs[,1:mfw])
+      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
+      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
+    }
+  # writting the stuff -- the file name will be changed accordingly
+  write.table(data.to.be.saved,
      file=paste("frequencies_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""))
 }
 
@@ -1686,19 +1706,19 @@ if(exists("nodes") == TRUE ) {
 
 if(exists("distance.table")) {
   attr(distance.table, "description") = "final distances between each pair of samples"
-  class(distance.table) = "stylo.data"
+  class(distance.table) = c("stylo.data", "matrix")
 }
 if(exists("frequencies.0.culling")) {
   attr(frequencies.0.culling, "description") = "frequencies of words/features accross the corpus"
-  class(frequencies.0.culling) = "stylo.data"
+  class(frequencies.0.culling) = c("stylo.data", "matrix")
 }
 if(exists("table.with.all.freqs")) {
   attr(table.with.all.freqs, "description") = "frequencies of words/features accross the corpus"
-  class(table.with.all.freqs) = "stylo.data"
+  class(table.with.all.freqs) = c("stylo.data", "matrix")
 }
 if(exists("table.with.all.zscores")) {
   attr(table.with.all.zscores, "description") = "z-scored frequencies accross the corpus"
-  class(table.with.all.zscores) = "stylo.data"
+  class(table.with.all.zscores) = c("stylo.data", "matrix")
 }
 if(exists("features")) {
   attr(features, "description") = "features (e.g. words, n-grams, ...) applied to data"
@@ -1725,8 +1745,7 @@ if(exists("list.of.nodes")) {
 }
 if(exists("pca.coordinates")) {
   attr(pca.coordinates, "description") = "PCA coordinates (PC1, PC2 and PC3)"
-# this does not work:
-#  class(pca.coordinates) = "stylo.data"
+  class(pca.coordinates) = c("stylo.data", "matrix")
 }
 
 
