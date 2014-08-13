@@ -16,7 +16,8 @@ function(gui = TRUE,
          parsed.corpus = NULL,
          features = NULL,
          path = NULL, 
-         corpus.dir = "corpus", ...) {
+         corpus.dir = "corpus",
+         network = FALSE, ...) {
 
 
 
@@ -62,8 +63,18 @@ variables = stylo.default.settings(...)
 # optionally, displaying a GUI box
 # (it absorbes the arguments passed from command-line)
 if (gui == TRUE) {
-  variables = gui.stylo(...)
-} 
+      # first, checking if the GUI can be displayed
+      # (the conditional expression is stolen form the generic function "menu")
+      if (.Platform$OS.type == "windows" || .Platform$GUI == 
+            "AQUA" || (capabilities("tcltk") && capabilities("X11") && 
+            suppressWarnings(tcltk::.TkUp))) {
+        variables = gui.stylo(...)
+      } else {
+        cat("\n")
+        cat("GUI could not be launched -- default settings will be used;\n")
+        cat("otherwise please pass your variables as command-line agruments\n")
+      }
+}
 
 
 
@@ -159,6 +170,10 @@ relative.frequencies = variables$relative.frequencies
 splitting.rule = variables$splitting.rule
 preserve.case = variables$preserve.case
 encoding = variables$encoding
+stop.words = variables$stop.words
+
+sample.overlap = variables$sample.overlap
+number.of.samples = variables$number.of.samples
 
 
 
@@ -585,6 +600,8 @@ if(corpus.exists == FALSE) {
                          sample.size = sample.size,
                          sampling = sampling,
                          sampling.with.replacement = sampling.with.replacement,
+                         sample.overlap = sample.overlap, 
+                         number.of.samples = number.of.samples,
                          features = analyzed.features,
                          ngram.size = ngram.size,
                          preserve.case = preserve.case)
@@ -681,12 +698,18 @@ if(exists("frequencies.0.culling") == FALSE) {
 	  }
 	# (re)create the dump-dir
 	dir.create("sample_dump")
+    # writing the stuff into files
+    setwd("sample_dump")
+      for(i in names(loaded.corpus)) {
+        cat(loaded.corpus[[i]],file=paste(names(loaded.corpus[i]),".txt",sep=""))
+      }
+    setwd("..")
   }
 
 
   # preparing a huge table of all the frequencies for the whole corpus
   frequencies.0.culling = make.table.of.frequencies(corpus = loaded.corpus,
-                                               words = mfw.list.of.all, 
+                                               features = mfw.list.of.all, 
                                                relative = relative.frequencies)
 
 
@@ -806,11 +829,14 @@ if (analysis.type == "BCT") {
 
 # testing if desired culling settings are acceptable;
 # if too large, it is set to maximum possible
-  if(culling.max > 100) {
+  if(culling.max >= 100) {
   culling.max = 100
   }
+  if(culling.min >= 100) {
+  culling.min = 100
+  }
 # if too small, it is set to 0 (i.e. minimal value)
-  if(culling.min < 0) {
+  if(culling.min <= 0) {
   culling.min = 0
   }
 # if max value is LOWER than min value, make them equal
@@ -827,56 +853,29 @@ if (analysis.type == "BCT") {
 
 
 for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
-current.culling = j * culling.incr
 
-# the beginning of the culling procedure 
-raw.list.after.culling = c()
+        current.culling = j * culling.incr
 
-# extracting non-zero values the frequency table.
-nonzero.values = frequencies.0.culling > 0
+        # applying culling
+        table.with.all.freqs = culling(frequencies.0.culling, current.culling)
 
 
-# counting non-zero values
-for (y in 1: length(nonzero.values[1,])) {
-  raw.list.after.culling = c(raw.list.after.culling, 
-              (length(grep("TRUE",nonzero.values[,y])) / 
-                     length(nonzero.values[,y])) 
-                           >= current.culling/100 
-                           )
-}
-# a raw culling list has no word-identification; let's change it:
-names(raw.list.after.culling) = colnames(frequencies.0.culling)
-# a simple sequence of words which have not been culled
+        # additionally, deleting pronouns (if applicable)
+        if(delete.pronouns == TRUE) {
+                table.with.all.freqs = 
+                delete.stop.words(table.with.all.freqs, pronouns)
+        }
+        
 
-list.of.words.after.culling = c(names(raw.list.after.culling[grep("TRUE",raw.list.after.culling)]))
-
-# procedure for deleting pronouns
-if (delete.pronouns == TRUE) {
-    list.of.words.after.culling = 
-      list.of.words.after.culling[!(list.of.words.after.culling %in% pronouns)]
-}
-
-
-# just in case: get rid of empty "words" (strings containing no characters)
-list.of.words.after.culling = 
-           list.of.words.after.culling[nchar(list.of.words.after.culling) >0]
-
-
-# the above list-of-not-culled to be applied to the wordlist:
-table.with.all.freqs = frequencies.0.culling[,c(list.of.words.after.culling)]
-
-# the names of the samples are passed to the frequency table
-#if(use.existing.freq.tables == FALSE) {
-#  rownames(table.with.all.freqs) = names(loaded.corpus)
-#}
-
-  
-# #################################################
-# culling is done, but we are still inside the main loop
-
-# starting the frequency list at frequency rank set in option start.at above
-table.with.all.freqs = table.with.all.freqs[,start.at:length(table.with.all.freqs[1,])]
-
+        # optionally, deleting stop words
+        if(is.vector(stop.words) == TRUE) {
+                table.with.all.freqs = delete.stop.words(table.with.all.freqs, 
+                                                         stop.words)
+        }
+        
+        
+        
+        
 
 # Testing if the desired MFW number is acceptable,
 # if MFW too large, it is set to maximum possible.
@@ -899,7 +898,8 @@ table.with.all.freqs = table.with.all.freqs[,start.at:length(table.with.all.freq
 
 
 cat("\n\n")
-cat("culling @ ", current.culling,"\t","available words ",mfw.max,"\n")
+cat("culling @ ", current.culling,"\t","available features (words) ",
+                  length(table.with.all.freqs[1,]),"\n")
 
 
 # #################################################
@@ -960,9 +960,9 @@ for(i in seq(mfw.min,mfw.max,round(mfw.incr)) ) {
 mfw = i
 
 
-# for safety reasons, if MFWs > words in samples
-if(mfw > length(list.of.words.after.culling) ) {
-  mfw = length(list.of.words.after.culling)
+# for safety reasons, if MFWs > variables in samples
+if(mfw > length(colnames(table.with.all.freqs)) ) {
+  mfw = length(colnames(table.with.all.freqs))
 }
 
 # the general counter for various purposes
@@ -1313,7 +1313,7 @@ if(analysis.type == "PCV" || analysis.type == "PCR") {
 # prepares a list of dendrogram-like structures for a bootstrap consensus tree
 # (the final tree will be generated later, outside the main loop of the script)
 if (analysis.type == "BCT") {
-  mfw.info = paste(mfw.min,"-",mfw.max.original, sep="")
+  mfw.info = paste(mfw.min,"-",mfw.info, sep="")
   name.of.the.method = "Bootstrap Consensus Tree"
   short.name.of.the.method = "Consensus" 
   # calculates the dendrogram for current settings
@@ -1393,6 +1393,8 @@ if(analysis.type != "BCT") {
     svg(filename = paste(graph.filename,"%03d",".svg",sep=""),
             width=plot.custom.width,height=plot.custom.height,
             pointsize=plot.font.size)
+    plot.current.task()
+    dev.off()
     }
   if(write.png.file == TRUE) {
     png(filename = paste(graph.filename,"%03d",".png",sep=""), 

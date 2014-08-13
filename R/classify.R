@@ -62,11 +62,23 @@ variables = stylo.default.settings(...)
 
 
 
+
 # optionally, displaying a GUI box
 # (it absorbes the arguments passed from command-line)
 if (gui == TRUE) {
-  variables = gui.classify(...)
-  } 
+      # first, checking if the GUI can be displayed
+      # (the conditional expression is stolen form the generic function "menu")
+      if (.Platform$OS.type == "windows" || .Platform$GUI == 
+            "AQUA" || (capabilities("tcltk") && capabilities("X11") && 
+            suppressWarnings(tcltk::.TkUp))) {
+        variables = gui.classify(...)
+      } else {
+        cat("\n")
+        cat("GUI could not be launched -- default settings will be used;\n")
+        cat("otherwise please pass your variables as command-line agruments\n")
+      }
+}
+
 
 
 
@@ -145,12 +157,15 @@ relative.frequencies = variables$relative.frequencies
 splitting.rule = variables$splitting.rule
 preserve.case = variables$preserve.case
 encoding = variables$encoding
-
-cv = variables$cv
 cv.folds = variables$cv.folds
+stop.words = variables$stop.words
+sample.overlap = variables$sample.overlap
+number.of.samples = variables$number.of.samples
 
 
 
+# ['cv' is temporarily switched off, it always performs 'cv ="thorough"']
+# cv = variables$cv
 
 
 
@@ -203,7 +218,7 @@ if(number.of.candidates < 1) {
     use.existing.freq.tables = FALSE
   }
 # Backward compatibility: if "use.existing.wordlist" is switched on, then
-# the file "wordlist.txt" be used, provided that it does exist
+# the file "wordlist.txt" will be used, provided that it does exist
   if(use.existing.wordlist == TRUE & file.exists("wordlist.txt") == TRUE ) { 
     features = "wordlist.txt"
   } else {
@@ -601,6 +616,8 @@ if(corpus.exists == FALSE) {
                          sample.size = sample.size,
                          sampling = sampling,
                          sampling.with.replacement = sampling.with.replacement,
+                         sample.overlap = sample.overlap, 
+                         number.of.samples = number.of.samples,
                          features = analyzed.features,
                          ngram.size = ngram.size)
 
@@ -615,6 +632,8 @@ if(corpus.exists == FALSE) {
                          sample.size = sample.size,
                          sampling = sampling,
                          sampling.with.replacement = sampling.with.replacement,
+                         sample.overlap = sample.overlap, 
+                         number.of.samples = number.of.samples,
                          features = analyzed.features,
                          ngram.size = ngram.size)
 }
@@ -719,19 +738,63 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
   }   # <----- conditional expr. if(features.exist == TRUE) terminates here
 
 
+
+
+
+
+
+  # empty the dump-dir if it already existed and create it if it did not previously exist
+  if(dump.samples == TRUE){
+	  if (file.exists("sample_dump_primary_set")){
+		# a dump-dir seems to have been created during a previous run
+		# tmp delete the dump-dir to remove all of its previous contents
+		unlink("sample_dump_primary_set", recursive = TRUE) 
+	  }
+	# (re)create the dump-dir
+	dir.create("sample_dump_primary_set")
+    # writing the stuff into files
+    setwd("sample_dump_primary_set")
+      for(i in names(corpus.of.primary.set)) {
+        cat(corpus.of.primary.set[[i]],file=paste(names(corpus.of.primary.set[i]),".txt",sep=""))
+      }
+    setwd("..")
+  }
+  # empty the dump-dir if it already existed and create it if it did not previously exist
+  if(dump.samples == TRUE){
+	  if (file.exists("sample_dump_secondary_set")){
+		# a dump-dir seems to have been created during a previous run
+		# tmp delete the dump-dir to remove all of its previous contents
+		unlink("sample_dump_secondary_set", recursive = TRUE) 
+	  }
+	# (re)create the dump-dir
+	dir.create("sample_dump_secondary_set")
+    # writing the stuff into files
+    setwd("sample_dump_secondary_set")
+      for(i in names(corpus.of.secondary.set)) {
+        cat(corpus.of.secondary.set[[i]],file=paste(names(corpus.of.secondary.set[i]),".txt",sep=""))
+      }
+    setwd("..")
+  }
+
+
+
+
+
+
+
   # blank line on the screen
   cat("\n")
 
 
   # preparing a huge table of all the frequencies for the training set
   freq.I.set.0.culling = make.table.of.frequencies(corpus = corpus.of.primary.set,
-                            words = mfw.list.of.all,
+                            features = mfw.list.of.all,
                             absent.sensitive = FALSE,
                             relative = relative.frequencies)
 
   # preparing a huge table of all the frequencies for the test set
   freq.II.set.0.culling = make.table.of.frequencies(corpus = corpus.of.secondary.set,
-                            words = mfw.list.of.all,
+                            features = mfw.list.of.all,
                             absent.sensitive = FALSE,
                             relative = relative.frequencies)
 
@@ -877,6 +940,9 @@ perfect.guessing = length(authors.II.set[authors.II.set %in% authors.I.set])
   if(culling.max > 100) {
   culling.max = 100
   }
+  if(culling.min > 100) {
+  culling.min = 100
+  }
 # if too small, it is set to 0 (i.e. minimal value)
   if(culling.min < 0) {
   culling.min = 0
@@ -895,54 +961,48 @@ perfect.guessing = length(authors.II.set[authors.II.set %in% authors.I.set])
 
 
 for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
-current.culling = j * culling.incr
-
-# the beginning of the culling procedure (this is to be done 
-# on the primary set only; the secondary set is using the same list!)
-#
-raw.list.after.culling = c()
-
-# extracting non-zero values from primary set frequency table,
-# or from both frequency tables (if specified)
-  if(culling.of.all.samples == FALSE) {
-    nonzero.values = freq.I.set.0.culling > 0
-  } else {
-    nonzero.values = rbind(freq.I.set.0.culling,freq.II.set.0.culling) > 0
-  }
-
-# counting of how many non-zero values there are
-for (y in 1: length(nonzero.values[1,])) {
-  raw.list.after.culling = c(raw.list.after.culling, 
-              (length(grep("TRUE",nonzero.values[,y])) / 
-                     length(nonzero.values[,y])) 
-                           >= current.culling/100 
-                           )
-  }
-# a raw culling list has no word-identification; let's change it:
-names(raw.list.after.culling) = colnames(freq.I.set.0.culling)
-
-# a simple sequence of words which were not culled
-list.of.words.after.culling = 
-          c(names(raw.list.after.culling[grep("TRUE",raw.list.after.culling)]))
 
 
-# procedure for deleting pronouns
-if (delete.pronouns == TRUE) {
-    list.of.words.after.culling = 
-      list.of.words.after.culling[!(list.of.words.after.culling %in% pronouns)]
-    }
+        current.culling = j * culling.incr
 
+        
+        # applying culling
+        # an additional table composed of relative word frequencies 
+        # of joint primary and secondary sets
+        if(culling.of.all.samples == FALSE) {
+                # applying the function culling to the I set
+                primary.set = culling(freq.I.set.0.culling, current.culling)
+                # selecting the same variables from the II set
+                secondary.set = freq.II.set.0.culling[,colnames(primary.set)]
+        } else {
+                # combining the two sets
+                freq.table.both.sets = rbind(freq.I.set.0.culling, 
+                                             freq.II.set.0.culling)
+                # applying the culling function to the combined table
+                freq.table.both.sets = culling(freq.table.both.sets, 
+                                               current.culling)
+                # split the combined table into two sets again
+                primary.set = freq.table.both.sets[rownames(freq.I.set.0.culling),]
+                secondary.set = freq.table.both.sets[rownames(freq.II.set.0.culling),]
+        }
 
-# just in case: get rid of empty "words" (strings containing no characters)
-list.of.words.after.culling = 
-           list.of.words.after.culling[nchar(list.of.words.after.culling) >0]
+        
 
+        # additionally, deleting pronouns (if applicable)
+        if(delete.pronouns == TRUE) {
+                primary.set = delete.stop.words(primary.set, pronouns)
+                secondary.set = delete.stop.words(secondary.set, pronouns)
+        }
+        
 
-# the above list-of-not-culled to be applied to both sets:
-primary.set = freq.I.set.0.culling[,c(list.of.words.after.culling)]
-##    rownames(primary.set) = filenames.primary.set
-secondary.set = freq.II.set.0.culling[,c(list.of.words.after.culling)]
-##    rownames(secondary.set) = filenames.secondary.set
+        # optionally, deleting stop words
+        if(is.vector(stop.words) == TRUE) {
+                primary.set = delete.stop.words(primary.set, stop.words)        
+                secondary.set = delete.stop.words(secondary.set, stop.words)
+        }
+
+        
+
 
 # #################################################
 # culling is done, but we are still inside the main loop
@@ -986,7 +1046,8 @@ secondary.set = secondary.set[,start.at:length(secondary.set[1,])]
 
 
 cat("\n")
-cat("culling @ ", current.culling,"\t","available words ",mfw.max,"\n")
+cat("culling @ ", current.culling,"\t","available words ",
+                  length(primary.set[1,]),"\n")
 
 
 
@@ -1035,6 +1096,8 @@ if(z.scores.of.all.samples == FALSE) {
   # the z-scores can be calculated on both sets as alternatively  
   zscores.table.both.sets = scale(freq.table.both.sets)
   zscores.table.both.sets = zscores.table.both.sets[,]
+  zscores.primary.set = zscores.table.both.sets[1:length(primary.set[,1]),]
+  zscores.secondary.set = zscores.table.both.sets[1:length(secondary.set[,1]),]
   }
 
 
@@ -1083,11 +1146,10 @@ mfw = i
 
 
 # for safety reasons, if MFWs > words in samples
-if(mfw > length(list.of.words.after.culling) ) {
-  mfw = length(list.of.words.after.culling)
+if(mfw > length(colnames(freq.table.both.sets)) ) {
+  mfw = length(colnames(freq.table.both.sets))
   }
 
-  
 
 
 # the current task (number of MFW currently analyzed) echoed on the screen
@@ -1112,7 +1174,13 @@ distance.name.on.graph = "standard classification"
 
 # Delta in its various flavours
 
-perform.delta = function(zscores.table.both.sets, distance.measure = "CD") {
+perform.delta = function(training.set, test.set, distance.measure = "CD") {
+
+  
+# first, combining the two sets into one matrix        
+zscores.table.both.sets = rbind(training.set, test.set)
+
+        
 # calculating classic Delta distances
 if(distance.measure == "CD") {
   distance.name.on.graph = "Classic Delta distance"
@@ -1172,8 +1240,8 @@ colnames(distance.table)=gsub("\\.txt$","",rownames(zscores.table.both.sets))
 # extracting candidates, drawing, printing, etc.
 
 # a selected area of the distance.table is needed, with colnames()
-no.of.possib = length(primary.set[,1])
-no.of.candid = length(secondary.set[,1])
+no.of.possib = length(training.set[,1])
+no.of.candid = length(test.set[,1])
 selected.dist = 
           as.matrix(distance.table[no.of.possib+1:no.of.candid,1:no.of.possib])
 
@@ -1293,7 +1361,8 @@ return(classification.results)
 
 
 if(tolower(classification.method) == "delta") {
-  selected.dist = perform.delta(zscores.table.both.sets, distance.measure)
+  selected.dist = perform.delta(zscores.primary.set, zscores.secondary.set, 
+                                distance.measure)
 }
 
 
@@ -1339,7 +1408,9 @@ if(final.ranking.of.candidates == TRUE) {
       misclassified.samples = 
                    paste(rownames(secondary.set), "\t-->\t",
                    classification.results)[classes.test!=classification.results]
-      cat(misclassified.samples,file=outputfile,append=T,sep="\n")    
+      cat(misclassified.samples, file=outputfile, append=T, sep="\n") 
+      # temporarily (the results should be maed available, eventually)
+      rm(misclassified.samples)
     }
 }
 
@@ -1375,14 +1446,11 @@ if(how.many.correct.attributions == TRUE) {
 
 
 
-if(cv == "thorough") {
+if(cv.folds > 0) {
 
   cat("\n")
   cat("cross-validation...\n")
  
-  # an additional table combined of frequencies of set I and II
-  # just for feeding the bootstrap module 
-  freq.table.both.sets.binded = rbind(primary.set[,1:mfw],secondary.set[,1:mfw])
 
   #bootstrap.output = "bootstrap_output.txt"
   # cleaning the bootstrapfile
@@ -1392,57 +1460,76 @@ if(cv == "thorough") {
   cross.validation.results = c()
   cross.validation.results.all = c()
 
-  # starting two emtpy vectors
-  total.no.of.correct.attrib.cv = c()
-  total.no.of.possible.attrib.cv = c()
-  
+
   
 
-  # the beginning of k-fold cross-validation k number of iterations
+  # beginning of k-fold cross-validation (k being the number of iterations)
   for(iterations in 1 : cv.folds) {
 
-    names.of.training.set.orig = rownames(primary.set)
-    names.of.training.set.new = c()
-    classes.training.set = gsub("_.*","",names.of.training.set.orig,perl=T)
-    classes.test.set = gsub("_.*","",rownames(secondary.set),perl=T)
+    # an additional table combined of frequencies of set I and II
+    # just for feeding the bootstrap module 
+    freq.table.both.sets.binded = rbind(primary.set[,1:mfw],secondary.set[,1:mfw])
 
+          
+    names.of.training.set.orig = rownames(primary.set)
+    classes.training.set = gsub("_.*", "", rownames(primary.set))
+    classes.test.set = gsub("_.*", "", rownames(secondary.set))
+    names.both.sets = rownames(freq.table.both.sets.binded)
+    classes.both.sets = c(classes.training.set, classes.test.set)
+    
+    training.samples = c()
+    test.samples = c()
+
+    
       # this looks for classes that were not represented so far in I set
-      for(i in classes.training.set) {
-        # shuffle the order of samples (both sets combined)
-        names.of.the.texts = sample(rownames(freq.table.both.sets.binded))
-        # exclude samples that have been already chosen to the training set
-        names.of.the.texts = setdiff(names.of.the.texts, names.of.training.set.new)
-        # extract the classes, or strings before the first underscore
-        classes.both.sets = gsub("_.*","",names.of.the.texts,perl=T)
-        # find the first matching sample
-        randomly.picked.sample = grep(i,classes.both.sets)[1]
-        # retrieve its full name
-        training.set.next.member = names.of.the.texts[randomly.picked.sample]
-        # build the vector of randomly chosen members of the training set
-        names.of.training.set.new = c(names.of.training.set.new, training.set.next.member)
+      for(i in names(table(classes.training.set)) ) {
+        #
+        # count the number of samples of class i included originally in I set
+        no.of.training.samples = sum(as.numeric(classes.training.set == i))
+        # determine the class' name, surround the name with word boundary char
+        class.name = paste("\\b",i,"\\b",sep="")
+        # in both sets, identify the positions of current class' samples 
+        pinpoint.samples = grep(class.name, classes.both.sets)
+        # sanity check, just in case
+        if(length(pinpoint.samples) > no.of.training.samples) {
+                # select randomly N items from the pinpoited positions
+                training = sample(pinpoint.samples, no.of.training.samples)
+                # identify the remaining ones: future test set samples
+                test = setdiff(pinpoint.samples, training)
+                # pick the names at the positions identified above
+                training.samples = c(training.samples, names.both.sets[training])
+                # the remaining ones go to the test set
+                test.samples = c(test.samples, names.both.sets[test])
+        } else {
+                test = pinpoint.samples
+                test.samples = c(test.samples, names.both.sets[test])
+        }
       }
 
-   # getting back the original samples' names
-   names.of.the.texts = rownames(freq.table.both.sets.binded)
+
+#### !!! Anon samples are excluded!!!
 
 
-  # establishing the I set:
-  training.set = freq.table.both.sets.binded[names.of.training.set.new,]
+  # establishing the training set:
+  training.set = freq.table.both.sets.binded[training.samples,]
 
-  # establishing the II set
-  test.set = 
-        freq.table.both.sets.binded[!(names.of.the.texts %in% names.of.training.set.new),]
+  # establishing the test set
+  test.set = freq.table.both.sets.binded[test.samples,]
 
-  # both sets binded again, after rearrangements 
-  freq.table.both.sets.binded = rbind(training.set,test.set)
-
+  
+  zscores.training.set = zscores.table.both.sets[training.samples,]
+  zscores.test.set = zscores.table.both.sets[test.samples,]
+    
 
   if(tolower(classification.method) == "delta") {
-    current.zscores = scale(freq.table.both.sets.binded)
-    selected.dist1 = perform.delta(current.zscores, distance.measure)
+    # zscores as a separate function should be applied here:
+#    current.zscores = scale(freq.table.both.sets.binded)
+    selected.dist1 = perform.delta(zscores.training.set,
+                                   zscores.test.set, 
+                                   distance.measure)
   }
   if(tolower(classification.method) == "knn") {
-    classification.results = perform.knn(training.set,test.set)
+    classification.results = perform.knn(training.set,test.set, k.value)
   }
   if(tolower(classification.method) == "svm") {
     classification.results = perform.svm(training.set,test.set)
@@ -1450,10 +1537,15 @@ if(cv == "thorough") {
   if(tolower(classification.method) == "nsc") {
     classification.results = perform.nsc(training.set,test.set)
   }
-
+  if(tolower(classification.method) == "naivebayes") {
+    classification.results = perform.naivebayes(training.set,test.set)
+  }
 
   
-  # retrieving the names of classes
+  # retrieving classes of the new training set
+  classes.training = gsub("_.*","",rownames(training.set))
+  
+  # retrieving classes of the new test set
   classes.test = gsub("_.*","",rownames(test.set))
 
 
@@ -1467,12 +1559,8 @@ if(cv == "thorough") {
                                      classification.results))
         }
       # 
-      perfect.guessing.cv = 
-        length(classes.training.set[classes.test.set %in% classes.training.set])
-      total.no.of.correct.attrib.cv = 
-                         c(total.no.of.correct.attrib.cv, no.of.correct.attrib)
-      total.no.of.possible.attrib.cv = 
-                         c(total.no.of.possible.attrib.cv, perfect.guessing.cv)
+      # getting the max. number of samples that couold be guessed
+      perfect.guessing.cv = sum(as.numeric(classes.test %in% classes.training))
       cat("\n",file=outputfile,append=T)
       cat(mfw, " MFW , culled @ ",current.culling,"%,  ",
                no.of.correct.attrib," of ", perfect.guessing.cv,"\t(",
@@ -1489,7 +1577,7 @@ if(cv == "thorough") {
   
   cross.validation.results.all = cbind(cross.validation.results.all, cross.validation.results)
   colnames(cross.validation.results.all) = paste(mfw, "@", current.culling, sep="")
-}   # <-- if cv = "thorough"
+}   # <-- if(cv.folds > 0)
 
 
 
@@ -1523,8 +1611,7 @@ if(save.distance.tables == TRUE && exists("distance.table") == TRUE) {
 }
 
 # writing the words (or features) actually used in the analysis
-##features.actually.used = colnames(table.with.all.freqs[,1:mfw])
-features.actually.used = list.of.words.after.culling[start.at : mfw.max]
+features.actually.used = colnames(freq.table.both.sets[,1:mfw])
 #
 if(save.analyzed.features == TRUE) {
     # checking if encoding conversion is needed
@@ -1620,7 +1707,7 @@ frequencies.training.set = freq.I.set.0.culling
 frequencies.test.set = freq.II.set.0.culling
 frequencies.both.sets = freq.table.both.sets
 zscores.both.sets = zscores.table.both.sets
-features.actually.used = list.of.words.after.culling[start.at : mfw.max]
+features.actually.used = colnames(freq.table.both.sets[,1:mfw])
 features = mfw.list.of.all
 
 # what about removing some of the variables? (suppose there are thousands
@@ -1725,7 +1812,7 @@ results.classify$name = call("classify")
 # rolling.delta() and oppose(). See the files "print.stylo.results.R"
 # and "summary.stylo.results.R" (no help files are provided, since
 # these two functions are not visible for the users).
-class(results.classify) <- "stylo.results"
+class(results.classify) = "stylo.results"
 
 
 
