@@ -4,6 +4,19 @@
 
 
 
+== version 0.5.8, 2014/09/3
+ * new sequential methods available: rolling SVM,
+   rolling NSC, and rolling Delta
+ * bug in load.corpus.and.parse() fixed
+ * bug in rolling.delta() fixed
+ * network related bug in stylo() neutralized
+ * classification procedures as separate functions:
+   perform.delta(), perform.svm(), perform.knn(),
+   perform.naivebayes(), perform.nsc()
+ * classification output enhanced
+ * doc files for new functions added
+
+
 == version 0.5.7, 2014/08/13
  * culling implemented as a separate function
  * custom stop words deletion: delete.stop.words()

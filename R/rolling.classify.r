@@ -1,20 +1,22 @@
 
-# Function that performs a number of machine-learning methods
-# of classification used in computational stylistics: Delta (Burrows, 2002), 
-# k-Nearest Neighbors classification, Support Vectors Machines, Naive Bayes, 
-# and Nearest Shrunken Centroids (Jockers and Witten, 2010). Most of the options 
-# are derived from the 'stylo' function.
 
-classify <-
-function(gui = TRUE,
+rolling.classify <- 
+function(gui = FALSE,
+         training.corpus.dir = "reference_set",
+         test.corpus.dir = "test_set",
          training.frequencies = NULL,
          test.frequencies = NULL,
          training.corpus = NULL,
          test.corpus = NULL,
          features = NULL, 
          path = NULL,
-         training.corpus.dir = "primary_set",
-         test.corpus.dir = "secondary_set", ...) {
+         slice.size = 5000,
+         slice.overlap = 4500,
+         training.set.sampling = "no.sampling",
+         mfw = 100,
+         culling = 0,
+         milestone.points = NULL,
+         add.ticks = FALSE, ...) {
 
 
 
@@ -22,9 +24,6 @@ function(gui = TRUE,
 # be stored on the following list and used to overwrite the defaults
 passed.arguments = list(...)
 
-
-# variable's initialization
-cross.validation.summary = c()
 
 
 # changing working directory (if applicable)
@@ -48,10 +47,10 @@ if(is.character(path) == TRUE & length(path) > 0) {
 
 
 if(is.character(training.corpus.dir)==FALSE | nchar(training.corpus.dir)==0) {
-  training.corpus.dir = "primary_set"
+  training.corpus.dir = "reference_set"
 }
 if(is.character(test.corpus.dir) == FALSE | nchar(test.corpus.dir) == 0) {
-  test.corpus.dir = "secondary_set"
+  test.sample.dir = "test_set"
 }
 
 
@@ -71,7 +70,9 @@ if (gui == TRUE) {
       if (.Platform$OS.type == "windows" || .Platform$GUI == 
             "AQUA" || (capabilities("tcltk") && capabilities("X11") && 
             suppressWarnings(tcltk::.TkUp))) {
-        variables = gui.classify(...)
+        #variables = gui.classify(...)
+        cat("\n")
+        cat("GUI could not be launched -- it is not supported yet :-( \n\n")
       } else {
         cat("\n")
         cat("GUI could not be launched -- default settings will be used;\n")
@@ -150,8 +151,6 @@ write.svg.file = variables$write.svg.file
 z.scores.of.all.samples = variables$z.scores.of.all.samples
 # #############################################################################
 
-
-
 # newly-added options
 relative.frequencies = variables$relative.frequencies
 splitting.rule = variables$splitting.rule
@@ -161,13 +160,6 @@ cv.folds = variables$cv.folds
 stop.words = variables$stop.words
 sample.overlap = variables$sample.overlap
 number.of.samples = variables$number.of.samples
-
-
-
-# ['cv' is temporarily switched off, it always performs 'cv ="thorough"']
-# cv = variables$cv
-
-
 
 
 
@@ -206,38 +198,6 @@ if(number.of.candidates < 1) {
 
 
 
-###############################################################################
-# Backward compatibility: if "use.existing.freq.tables" is switched on, then
-# two files with frequency tables will be used, provided that they do exist
-  if(use.existing.freq.tables == TRUE 
-                      & file.exists("freq_table_primary_set.txt") == TRUE
-                      & file.exists("freq_table_secondary_set.txt") == TRUE ) { 
-    training.frequencies = "freq_table_primary_set.txt"
-    test.frequencies = "freq_table_secondary_set.txt"
-  } else {
-    use.existing.freq.tables = FALSE
-  }
-# Backward compatibility: if "use.existing.wordlist" is switched on, then
-# the file "wordlist.txt" will be used, provided that it does exist
-  if(use.existing.wordlist == TRUE & file.exists("wordlist.txt") == TRUE ) { 
-    features = "wordlist.txt"
-  } else {
-    use.existing.wordlist = FALSE
-  }
-###############################################################################
-
-
-
-# #############################################################################
-# #############################################################################
-
-
-
-
-
-
-
-
 
 
 
@@ -247,9 +207,8 @@ if(number.of.candidates < 1) {
 # #################################################
 # the module for loading a corpus from text files;
 # it can be omitted if the frequency table for
-# both primary and secondary sets already exist
-# (then "use.existing.freq.tables" should be set 
-# to TRUE in the preamble of the script/GUI)
+# both training and test sets already exist
+# (then "use.existing.freq.tables" should be set to TRUE 
 # #################################################
 #
 
@@ -265,8 +224,6 @@ features.exist = FALSE
       if(is.vector(features) == TRUE) {
         # if yes, then convert the above object into characters, just in case
         features = as.character(features)
-        # link this vector into the variable used for calculations
-        mfw.list.of.all = features
       } else {
         cat("\n")
         cat("You seem to have chosen an existing set of features\n")
@@ -392,8 +349,6 @@ for(iteration in 1:2) {
   # If no custom features were chosen, take them from the variables' names
   if(features.exist == FALSE & corpus.exists == TRUE) {
      features = colnames(frequencies)
-     # this is stupid, but this obsolete variable is needed somewhere (?)
-     mfw.list.of.all = features
   }
 
 
@@ -532,10 +487,11 @@ if(corpus.exists == FALSE) {
     stop("corpus prepared incorrectly")
   }
   # Checking if the subdirectories contain any stuff
-  if(length(filenames.primary.set) <2 | length(filenames.secondary.set) <2) {
+  if(length(filenames.primary.set) <2 | length(filenames.secondary.set) >1) {
     cat("\n\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-        "Both subdirectories \"",training.corpus.dir,"\" and \"",
-        test.corpus.dir,"\" should contain at least two text samples!\n",
+        "The subdirectory \"",training.corpus.dir,"\" should contain at least", 
+        " two text samples; \n\"",
+        test.corpus.dir,"\" should contain exactly one sample!\n",
         "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n",sep="")
     # back to the original working directory
     setwd(original.path)
@@ -543,39 +499,62 @@ if(corpus.exists == FALSE) {
     stop("corpus prepared incorrectly")
   }
 
-  # loading text files, splitting, parsing, n-gramming, samping, and so forth
-  corpus.of.primary.set = load.corpus.and.parse(files = filenames.primary.set,
-                         corpus.dir = training.corpus.dir,
-                         encoding = encoding,
-                         markup.type = corpus.format,
-                         language = corpus.lang,
-                         splitting.rule = splitting.rule,
-                         preserve.case = preserve.case,
-                         sample.size = sample.size,
-                         sampling = sampling,
-                         sampling.with.replacement = sampling.with.replacement,
-                         sample.overlap = sample.overlap, 
-                         number.of.samples = number.of.samples,
-                         features = analyzed.features,
-                         ngram.size = ngram.size)
 
-  # loading text files: test set
-  corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
-                         corpus.dir = test.corpus.dir,
-                         encoding = encoding,
-                         markup.type = corpus.format,
-                         language = corpus.lang,
-                         splitting.rule = splitting.rule,
-                         preserve.case = preserve.case,
-                         sample.size = sample.size,
-                         sampling = sampling,
-                         sampling.with.replacement = sampling.with.replacement,
-                         sample.overlap = sample.overlap, 
-                         number.of.samples = number.of.samples,
-                         features = analyzed.features,
-                         ngram.size = ngram.size)
+# loading the sample to be rolled through, looking for milestone marks;
+# don't mint stupid names of variables (e.g. 'corpus.of.secondary.set')
+corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
+                           corpus.dir = test.corpus.dir,
+                           encoding = encoding,
+                           markup.type = corpus.format,
+                           language = corpus.lang,
+                           splitting.rule = splitting.rule,
+                           preserve.case = preserve.case,
+#                           sample.size = slice.size,
+                           sampling = "no.sampling"
+#                           features = analyzed.features,
+#                           ngram.size = ngram.size
+                           )
+
+milestone.points = grep("xmilestone", corpus.of.secondary.set[[1]])
+
+
+
+# once more: loading the sample to be rolled through
+corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
+                           corpus.dir = test.corpus.dir,
+                           encoding = encoding,
+                           markup.type = corpus.format,
+                           language = corpus.lang,
+                           splitting.rule = splitting.rule,
+                           preserve.case = preserve.case,
+                           sample.size = slice.size,
+                           sampling = "normal.sampling",  # moving window!
+                           sampling.with.replacement = sampling.with.replacement,
+                           sample.overlap = slice.overlap, # moving window!!!
+                           number.of.samples = number.of.samples,
+                           features = analyzed.features,
+                           ngram.size = ngram.size)
+
+
+# loading text files, splitting, parsing, n-gramming, samping, and so forth
+corpus.of.primary.set = load.corpus.and.parse(files = filenames.primary.set,
+                           corpus.dir = training.corpus.dir,
+                           encoding = encoding,
+                           markup.type = corpus.format,
+                           language = corpus.lang,
+                           splitting.rule = splitting.rule,
+                           preserve.case = preserve.case,
+                           sample.size = slice.size,
+                           sampling = training.set.sampling,
+                           sampling.with.replacement = sampling.with.replacement,
+                           sample.overlap = 0, # no moving window, this time!
+                           number.of.samples = number.of.samples,
+                           features = analyzed.features,
+                           ngram.size = ngram.size)
+
 }
 ###############################################################################
+
 
 
 
@@ -593,6 +572,7 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
 
   # both corpora (training set and test set) shoud contain some texts;
   # if the number of text samples is lower than 2, the script will stop
+  # (in the case of the test set, it MUST contain exacly one sample!)
   if(length(corpus.of.primary.set) < 2 || length(corpus.of.secondary.set) < 1) {
     cat("\n\n","either the training set or the test set is empty!", "\n\n")
     stop("corpus error")
@@ -605,7 +585,8 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
   if (features.exist == TRUE) {
     cat("\n")
     cat("using an existing wordlist (vector of features)...\n")
-    mfw.list.of.all = features
+    # just to say something
+    features = features
   } else {
     # Extracting all the words (features) used in the texts of primary set 
     # (or both if "Z-scores all" is set to TRUE)
@@ -645,14 +626,14 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
     cat(length(c(wordlist.of.primary.set,wordlist.of.secondary.set)),"tokens",
          "will be used to create a list of features\n")
     # the core procedure: frequency list
-    mfw.list.of.all = sort(table(c(wordlist.of.primary.set,wordlist.of.secondary.set)),
+    features = sort(table(c(wordlist.of.primary.set,wordlist.of.secondary.set)),
                             decreasing=T)
     # if the whole list is long, then cut off the tail (e.g., > 5000 mfw)
-      if (length(mfw.list.of.all) > mfw.list.cutoff) {
-        mfw.list.of.all = mfw.list.of.all[1:mfw.list.cutoff]
+      if (length(features) > mfw.list.cutoff) {
+        features = features[1:mfw.list.cutoff]
       }
     # the only thing we need are words ordered by frequency (no frequencies)
-    mfw.list.of.all = names(mfw.list.of.all)
+    features = names(features)
 
     # Saving the list of features.
     # some comments into the file containing wordlist
@@ -665,15 +646,16 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
     # the current wordlist into a file
       # checking if encoding conversion is needed
       if(encoding == "native.enc") {
-        data.to.be.saved = mfw.list.of.all
+        data.to.be.saved = features
       } else {
-        data.to.be.saved = iconv(mfw.list.of.all, to=encoding)
+        data.to.be.saved = iconv(features, to=encoding)
       }
   # writing the stuff
   cat(data.to.be.saved,file="wordlist.txt", sep="\n",append=T)
       
     
   }   # <----- conditional expr. if(features.exist == TRUE) terminates here
+
 
 
 
@@ -726,13 +708,13 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
 
   # preparing a huge table of all the frequencies for the training set
   freq.I.set.0.culling = make.table.of.frequencies(corpus = corpus.of.primary.set,
-                            features = mfw.list.of.all,
+                            features = features,
                             absent.sensitive = FALSE,
                             relative = relative.frequencies)
 
   # preparing a huge table of all the frequencies for the test set
   freq.II.set.0.culling = make.table.of.frequencies(corpus = corpus.of.secondary.set,
-                            features = mfw.list.of.all,
+                            features = features,
                             absent.sensitive = FALSE,
                             relative = relative.frequencies)
 
@@ -747,7 +729,7 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
         colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
       }
   # writing the stuff
-  write.table(data.to.be.saved, file = "freq_table_primary_set.txt")
+  write.table(data.to.be.saved, file = "freq_table_reference_set.txt")
 
   # now, the test set
       # checking if any re-encoding is needed 
@@ -759,7 +741,7 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
         colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
       }
   # writing the stuff
-  write.table(data.to.be.saved, file = "freq_table_secondary_set.txt")
+  write.table(data.to.be.saved, file = "freq_table_sliced_sample.txt")
 
   
 }
@@ -771,146 +753,17 @@ if(!exists("freq.I.set.0.culling") | !exists("freq.II.set.0.culling")) {
 
 
 
-# #################################################
-# module for exporting config settings
-# #################################################
-
-# Finally, we want to save some variable values for later use
-cat("",file="classify_config.txt",append=F)
-var.name <- function(x) { 
-      if(is.character(x)==TRUE) {
-      cat(paste(deparse(substitute(x)),"=\"",x,"\"", sep=""),file="classify_config.txt",sep="\n",append=T)
-        } else {
-          cat(paste(deparse(substitute(x)),x, sep="="),file="classify_config.txt",sep="\n",append=T) }
-        }
-
- var.name(corpus.format)
- var.name(corpus.lang)
- var.name(analyzed.features)
- var.name(ngram.size)
- var.name(mfw.min)
- var.name(mfw.max)
- var.name(mfw.incr)
- var.name(start.at)
- var.name(culling.min)
- var.name(culling.max)
- var.name(culling.incr)
- var.name(mfw.list.cutoff)
- var.name(delete.pronouns)
- var.name(preserve.case)
- var.name(encoding)
- var.name(use.existing.freq.tables)
- var.name(use.existing.wordlist)
- var.name(classification.method)
- var.name(culling.of.all.samples)
- var.name(z.scores.of.all.samples)
- var.name(reference.wordlist.of.all.samples)
- var.name(distance.measure)
- var.name(svm.kernel)
- var.name(svm.degree)
- var.name(svm.coef0)
- var.name(svm.cost)
- var.name(k.value)
- var.name(l.value)
- var.name(sampling)
- var.name(sample.size)
- var.name(length.of.random.sample)
- var.name(final.ranking.of.candidates)
- var.name(how.many.correct.attributions)
- var.name(number.of.candidates)
- var.name(save.distance.tables)
- var.name(save.analyzed.features)
- var.name(save.analyzed.freqs)
- 
-
- 
- 
-# #################################################
-
-
-
-
-
-
 
 # #################################################
-# MAIN PROGRAM; the main loop is below
-# #################################################
+# culling, pronoun deletion, stop word list deletion
 
 
-# cleaning the outputfile
-cat("",file=outputfile,append=F)
-
-# saving the original mfw.max value in mfw.max.original
-# this is useful for subtitles of bootstrap graphs
-mfw.max.original = mfw.max
-
-# the general counter for different purposes: initiation
-number.of.current.iteration = 0
-
-# useful for diagnostic reasons; this will be reported in the logfile
-total.no.of.correct.attrib = c()
-total.no.of.possible.attrib = c()
-
-# retrieving the total number of texts to be "guessed"
-# (anonymous texts and unique authorial samples will not be counted)
-authors.I.set = c(gsub("_.*","",rownames(freq.I.set.0.culling)))
-authors.II.set = c(gsub("_.*","",rownames(freq.II.set.0.culling)))
-perfect.guessing = length(authors.II.set[authors.II.set %in% authors.I.set])
-
-
-
-
-
-
-
-# #################################################
-# module for culling (THE MAIN LOOP IN THE PROGRAM)
-# #################################################
-# #################################################
-# #################################################
-# module for culling (THE MAIN LOOP IN THE PROGRAM)
-# #################################################
-
-
-# testing if desired culling settings are acceptable;
-# if too large, it is set to maximum possible
-  if(culling.max > 100) {
-  culling.max = 100
-  }
-  if(culling.min > 100) {
-  culling.min = 100
-  }
-# if too small, it is set to 0 (i.e. minimal value)
-  if(culling.min < 0) {
-  culling.min = 0
-  }
-# if max value is LOWER than min value, make them equal
-  if(culling.max < culling.min) {
-  culling.max = culling.min
-  }  
-# avoiding infinite loops
-  if(culling.incr <= 1) {
-  culling.incr = 10
-  }
-
-# #################################################
-
-
-
-for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
-
-
-        current.culling = j * culling.incr
-
-        
         # applying culling
         # an additional table composed of relative word frequencies 
         # of joint primary and secondary sets
         if(culling.of.all.samples == FALSE) {
                 # applying the function culling to the I set
-                primary.set = perform.culling(freq.I.set.0.culling,  
-                                             current.culling)
+                primary.set = perform.culling(freq.I.set.0.culling, culling)
                 # selecting the same variables from the II set
                 secondary.set = freq.II.set.0.culling[,colnames(primary.set)]
         } else {
@@ -918,8 +771,7 @@ for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
                 freq.table.both.sets = rbind(freq.I.set.0.culling, 
                                              freq.II.set.0.culling)
                 # applying the culling function to the combined table
-                freq.table.both.sets = perform.culling(freq.table.both.sets, 
-                                             current.culling)
+                freq.table.both.sets = perform.culling(freq.table.both.sets, culling)
                 # split the combined table into two sets again
                 primary.set = freq.table.both.sets[rownames(freq.I.set.0.culling),]
                 secondary.set = freq.table.both.sets[rownames(freq.II.set.0.culling),]
@@ -940,504 +792,308 @@ for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
                 secondary.set = delete.stop.words(secondary.set, stop.words)
         }
 
-        
+
+
+
+training.set = primary.set[,start.at:mfw]
+test.set = secondary.set[,start.at:mfw]
+
+
+
+
+
+
+
+
 
 
 # #################################################
-# culling is done, but we are still inside the main loop
+# the main part of the function begins!
+# #################################################
 
 
-
-
-
-# starting the frequency list at frequency rank set in option start.at above
-
-# TO SAY THE TRUTH, IT CAN BE DONE MUCH EARLIER: at the moment when 
-# the frequency list for either I set or both sets is produced,
-# it can be cut and used for building freq. tables
-
-primary.set = primary.set[,start.at:length(primary.set[1,])]
-secondary.set = secondary.set[,start.at:length(secondary.set[1,])]
-
-
-
-
-# Testing if the desired MFW number is acceptable,
-# if MFW too large, it is set to maximum possible.
-  if(mfw.max > length(primary.set[1,])) {
-  mfw.max = length(primary.set[1,])
-  }
-# if too small, it is set to 2 (i.e., minimal value)
-  if(mfw.min < 2) {
-  mfw.min = 2
-  }
-# if the max value is smaller than the min value, it will be adjusted
-  if(mfw.max < mfw.min) {
-  mfw.max = mfw.min
-  }
-# avoiding infinite loops
-  if( (mfw.max != mfw.min) && (mfw.incr == 0) ) {
-  mfw.incr = 10
-  }
-
-
-
-
-
-cat("\n")
-cat("culling @ ", current.culling,"\t","available words ",
-                  length(primary.set[1,]),"\n")
-
-
-
-
-                  
-
-
-# an additional table composed of relative word frequencies 
-# of joint primary and secondary sets
-freq.table.both.sets = rbind(primary.set, secondary.set)
-
-
-
-# Entropy distance: experimental, but entirely available
-# (the results do not really differ than for typical word frequencies)
-#
-# A = t(t(freq.table.both.sets + 1) / colSums(freq.table.both.sets + 1))
-# B = t(t(log(freq.table.both.sets + 2)) / -(colSums(A * log(A))))
-# freq.table.both.sets = B
-#
-
+# classification
 
 if(tolower(classification.method) == "delta") {
-        # a short message on the screen:
-        if(distance.measure == "CD") {
-                cat("Calculating classic Delta distances... \n")
-        }
-        if(distance.measure == "AL") {
-                cat("Calculating Argamon's Delta distances... \n")
-        }
-        if(distance.measure == "ED") {
-                cat("Calculating Eder's Delta distances... \n")
-        }
-        if(distance.measure == "ES") {
-                cat("Calculating Eder's Simple distances... \n")
-        }
-        if(distance.measure == "MH") {
-                cat("Calculating Mahattan distances... \n")
-        }
-        if(distance.measure == "CB") {
-                cat("Calculating Canberra distances... \n")
-        }
-        if(distance.measure == "EU") {
-                cat("Calculating Euclidean distances... \n")
-        }
-}
-
-
-
-
-
-
-
-
-
-
-# #################################################
-# the internal loop starts here (for i = mfw.min : mfw.max)
-# #################################################
-
-
-
-for(i in seq(mfw.min, mfw.max, round(mfw.incr)) ) {
-mfw = i
-
-
-
-# for safety reasons, if MFWs > words in samples
-if(mfw > length(colnames(freq.table.both.sets)) ) {
-  mfw = length(colnames(freq.table.both.sets))
-  }
-
-
-
-# the current task (number of MFW currently analyzed) echoed on the screen
-cat(mfw, " ")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if(tolower(classification.method) == "delta") {
-  classification.results = perform.delta(training.set = primary.set[,1:mfw], 
-                                test.set = secondary.set[,1:mfw],
+  classification.results = perform.delta(training.set, test.set, 
                                 distance = distance.measure,
                                 z.scores.both.sets = z.scores.of.all.samples)
-#
-# this should be provided by the function perform.delta (value: list of objects)
-#distance.table = "sorry! temporarily out of order"
-#
+  ylabel = "Delta classification"
 }
-
-
-if(tolower(classification.method) == "knn") {
-  classification.results = perform.knn(training.set = primary.set[,1:mfw], 
-                                       test.set = secondary.set[,1:mfw],
-                                       k.value = k.value)
-}
-
 
 if(tolower(classification.method) == "svm") {
-  classification.results = perform.svm(training.set = primary.set[,1:mfw], 
-                                       test.set = secondary.set[,1:mfw])
+  classification.results = perform.svm(training.set, test.set)
+  ylabel = "SVM classification"
 }
-
-
-if(tolower(classification.method) == "naivebayes") {
-  classification.results = perform.naivebayes(training.set= primary.set[,1:mfw], 
-                                              test.set = secondary.set[,1:mfw])
-}
-
 
 if(tolower(classification.method) == "nsc") {
-  classification.results = perform.nsc(training.set = primary.set[,1:mfw], 
-                                       test.set = secondary.set[,1:mfw])
+  classification.results = perform.nsc(training.set, test.set)
+  ylabel = "NSC classification"
+}
+
+if(tolower(classification.method) == "knn") {
+  classification.results = perform.knn(training.set, test.set, k.value)
+}
+
+if(tolower(classification.method) == "naivebayes") {
+  classification.results = perform.naivebayes(training.set,  test.set)
 }
 
 
 
 
 
-
-classes.test = gsub("_.*","",rownames(secondary.set))
-
-
-
-# returns the ranking of the most likely candidates as a list
-if(final.ranking.of.candidates == TRUE) {
-    cat("\n\n\n",file=outputfile,append=T)
-      misclassified.samples = 
-                   paste(rownames(secondary.set), "\t-->\t",
-                   classification.results)[classes.test!=classification.results]
-      cat(misclassified.samples, file=outputfile, append=T, sep="\n") 
-      # temporarily (the results should be made available, eventually)
-      rm(misclassified.samples)
-#    }
-}
-
-
-
-
-# returns the number of correct attributions
-if(how.many.correct.attributions == TRUE) {
-    no.of.correct.attrib = sum(as.numeric(classes.test == 
-                                 classification.results))
-    total.no.of.correct.attrib = 
-         c(total.no.of.correct.attrib, no.of.correct.attrib)
-    total.no.of.possible.attrib = 
-         c(total.no.of.possible.attrib, perfect.guessing)
-    cat("\n",file=outputfile,append=T)
-    cat(mfw, " MFW , culled @ ",current.culling,"%,  ",
-         no.of.correct.attrib," of ", perfect.guessing,"\t(",
-         round(no.of.correct.attrib / perfect.guessing * 100, 1),"%)",
-         "\n",file=outputfile,append=T,sep="")
-}
-
-
-
-
-
-
-
-
-
-
-
-if(cv.folds > 0) {
-
-  cat("\n")
-  cat("cross-validation...\n")
- 
-
-  #bootstrap.output = "bootstrap_output.txt"
-  # cleaning the bootstrapfile
-  #cat("",file=bootstrap.output,append=F)
-
-  # creating an empty matrix for the final success scores
-  cross.validation.results = c()
-  cross.validation.results.all = c()
-
-
-  
-
-  # beginning of k-fold cross-validation (k being the number of iterations)
-  for(iterations in 1 : cv.folds) {
-
-    # an additional table combined of frequencies of set I and II
-    # just for feeding the bootstrap module 
-    freq.table.both.sets.binded = rbind(primary.set[,1:mfw],secondary.set[,1:mfw])
-
-          
-    names.of.training.set.orig = rownames(primary.set)
-    classes.training.set = gsub("_.*", "", rownames(primary.set))
-    classes.test.set = gsub("_.*", "", rownames(secondary.set))
-    names.both.sets = rownames(freq.table.both.sets.binded)
-    classes.both.sets = c(classes.training.set, classes.test.set)
-    
-    training.samples = c()
-    test.samples = c()
-
-    
-      # this looks for classes that were not represented so far in I set
-      for(i in names(table(classes.training.set)) ) {
-        #
-        # count the number of samples of class i included originally in I set
-        no.of.training.samples = sum(as.numeric(classes.training.set == i))
-        # determine the class' name, surround the name with word boundary char
-        class.name = paste("\\b",i,"\\b",sep="")
-        # in both sets, identify the positions of current class' samples 
-        pinpoint.samples = grep(class.name, classes.both.sets)
-        # sanity check, just in case
-        if(length(pinpoint.samples) > no.of.training.samples) {
-                # select randomly N items from the pinpoited positions
-                training = sample(pinpoint.samples, no.of.training.samples)
-                # identify the remaining ones: future test set samples
-                test = setdiff(pinpoint.samples, training)
-                # pick the names at the positions identified above
-                training.samples = c(training.samples, names.both.sets[training])
-                # the remaining ones go to the test set
-                test.samples = c(test.samples, names.both.sets[test])
-        } else {
-                test = pinpoint.samples
-                test.samples = c(test.samples, names.both.sets[test])
-        }
-      }
-
-
-#### !!! Anon samples are excluded!!!
-
-
-  # establishing the training set:
-  training.set = freq.table.both.sets.binded[training.samples,]
-
-  # establishing the test set
-  test.set = freq.table.both.sets.binded[test.samples,]
-
-  
- # zscores.training.set = zscores.table.both.sets[training.samples,]
- # zscores.test.set = zscores.table.both.sets[test.samples,]
-    
-
-  if(tolower(classification.method) == "delta") {
-    classification.results = perform.delta(training.set,
-                                   test.set, 
-                                   distance = distance.measure,
-                                   z.scores.both.sets = z.scores.of.all.samples)
-  }
-  if(tolower(classification.method) == "knn") {
-    classification.results = perform.knn(training.set,test.set, k.value)
-  }
-  if(tolower(classification.method) == "svm") {
-    classification.results = perform.svm(training.set,test.set)
-  }
-  if(tolower(classification.method) == "nsc") {
-    classification.results = perform.nsc(training.set,test.set)
-  }
-  if(tolower(classification.method) == "naivebayes") {
-    classification.results = perform.naivebayes(training.set,test.set)
-  }
-
-  
-  # retrieving classes of the new training set
-  classes.training = gsub("_.*","",rownames(training.set))
-  
-  # retrieving classes of the new test set
-  classes.test = gsub("_.*","",rownames(test.set))
-
-
-  
-    # returns the number of correct attributions
-    if(how.many.correct.attributions == TRUE) {
-          no.of.correct.attrib = sum(as.numeric(classes.test == 
-                                     classification.results))
-      # getting the max. number of samples that couold be guessed
-      perfect.guessing.cv = sum(as.numeric(classes.test %in% classes.training))
-      cat("\n",file=outputfile,append=T)
-      cat(mfw, " MFW , culled @ ",current.culling,"%,  ",
-               no.of.correct.attrib," of ", perfect.guessing.cv,"\t(",
-               round(no.of.correct.attrib / perfect.guessing.cv * 100, 1),"%)",
-               "\n",file=outputfile,append=T,sep="")
-      # percentage of correct attributions
-      success.rate.cv = no.of.correct.attrib / perfect.guessing.cv * 100
-      # combining results for k folds
-      cross.validation.results = c(cross.validation.results, success.rate.cv)
-    }
-
-  }
-
-  
-  cross.validation.results.all = cbind(cross.validation.results.all, cross.validation.results)
-  colnames(cross.validation.results.all) = paste(mfw, "@", current.culling, sep="")
-}   # <-- if(cv.folds > 0)
-
-
-
-
-
-
-if(exists("cross.validation.results.all")) {
-  cross.validation.summary = cbind(cross.validation.summary, cross.validation.results.all)
-  rownames(cross.validation.summary) = 1:cv.folds
-}
-
-
-
-
-
-# saving a requested stuff into external files
-
-# writing distance table(s) to a file (if an appropriate option has been chosen)
-if(save.distance.tables == TRUE && exists("distance.table") == TRUE) {
-  distance.table.filename = paste("distance_table_",mfw,"mfw_",current.culling,"c.txt",sep="")
-    # checking if encoding conversion is needed
-    if(encoding == "native.enc") {
-      data.to.be.saved = distance.table
-    } else {
-      data.to.be.saved = distance.table
-      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
-      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
-    }
-  # writing the stuff
-  write.table(file=distance.table.filename, data.to.be.saved)
-}
-
-# writing the words (or features) actually used in the analysis
-features.actually.used = colnames(freq.table.both.sets[,1:mfw])
+# positioning in plots: replacing dummy sample names with their positions
+# 1th: (slice.size / 2)
+# 2nd: (slice.size / 2) + (slice.size - slice.overlap)
+# 3rd: (slice.size / 2) + (slice.size - slice.overlap) + (slice.size - slice.overlap)
+# Nth: (slice.size / 2) + ((slice.size - slice.overlap) * (N - 1))
+names(classification.results) =  c(round(slice.size/2) + 
+                                    ((slice.size - slice.overlap) * 
+                                    (1:length(names(classification.results)) -1)) )
 #
-if(save.analyzed.features == TRUE) {
-    # checking if encoding conversion is needed
-    if(encoding == "native.enc") {
-      data.to.be.saved = features.actually.used
-    } else {
-      data.to.be.saved = iconv(features.actually.used, to=encoding)
-    }
-  # writing the stuff
-  cat(data.to.be.saved,
-     file=paste("features_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""),
-     sep="\n")
-}
-
-# writing the frequency table that was actually used in the analysis
-if(save.analyzed.freqs == TRUE) {
-    # checking if encoding conversion is needed
-    if(encoding == "native.enc") {
-      data.to.be.saved = t(freq.table.both.sets[,1:mfw])
-    } else {
-      data.to.be.saved = t(freq.table.both.sets[,1:mfw])
-      rownames(data.to.be.saved) = iconv(rownames(data.to.be.saved), to=encoding)
-      colnames(data.to.be.saved) = iconv(colnames(data.to.be.saved), to=encoding)
-    }
-  # writting the stuff -- the file name will be changed accordingly
-  write.table(data.to.be.saved,
-     file=paste("frequencies_analyzed_",mfw,"mfw_",current.culling,"c.txt",sep=""))
-}
 
 
-
-
-}    # <-- the internal loop for(i) returns here
 # #################################################
-
-# blank line on the screen
-cat("\n")
-
-
-}    # <-- the main loop for(j) returns here
+# ...and that's it: the main procedure is completed
 # #################################################
 
 
 
-all.guesses = total.no.of.correct.attrib / total.no.of.possible.attrib * 100
-total.no.of.correct.attrib = sum(total.no.of.correct.attrib)
-total.no.of.possible.attrib = sum(total.no.of.possible.attrib)
-
-
-
-# information about the current task into the logfile
-cat("\nGeneral attributive success:  ", total.no.of.correct.attrib, " of ",
-           total.no.of.possible.attrib, " (",
-           round(total.no.of.correct.attrib/total.no.of.possible.attrib*100, 1), 
-           "%)\n",file=outputfile,append=T,sep="")
-cat("\nMFWs from ",mfw.min," to ",mfw.max.original,
-                  " @ increment ",mfw.incr,"\nCulling from ",culling.min,
-                  " to ",culling.max," @ increment ",culling.incr,
-                  "\nPronouns deleted: ",delete.pronouns,"\n",
-				  file=outputfile,append=T,sep="")
-# additional empty line in outputfile (EOF)
-cat("\n",file=outputfile,append=T)
-
-
-# the same information (about the current task) on screen
-cat("\nGeneral attributive success:  ", total.no.of.correct.attrib, " of ",
-           total.no.of.possible.attrib, " (",
-           round(total.no.of.correct.attrib/total.no.of.possible.attrib*100,1), 
-           "%, sd =", round(sd(all.guesses),1),"%)\n")
-cat("\nMFWs from ",mfw.min," to ",mfw.max.original,
-                  " @ increment ",mfw.incr,"\nCulling from ",culling.min,
-                  " to ",culling.max," @ increment ",culling.incr,
-                  "\nPronouns deleted: ",delete.pronouns,"\n",sep="")
-cat("\n")
-
-
-###########################################################
 
 
 
 
-# Names of many variables are incredibly unfashionable: they were acceptable
-# in ver. 0.0.1 of the script, which provided just a basic Delta test
-# with no additional options. Since it is quite a lot of work to modernize 
-# the variables' names in the code (and parhaps it is too late now...), 
-# this simple wrappers will rename at least the exported variables:
-success.rate = all.guesses
-  if(length(success.rate) >1) {
-    overall.success.rate = mean(all.guesses)
+# plotting
+
+
+
+# it should be claases rather than mere rownames!!!!!!!!!!!!!!!!!!!!
+colors.first.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.99)
+colors.second.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.6)
+colors.third.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.5)
+
+
+
+
+
+first.choice = attr(classification.results, "rankings")[,1]
+names(first.choice) = names(classification.results)
+second.choice = attr(classification.results, "rankings")[,2]
+names(second.choice) = names(classification.results)
+if(length(attr(classification.results, "rankings")[1,]) > 2) {
+      third.choice = attr(classification.results, "rankings")[,3]
+      names(third.choice) = names(classification.results)
+}
+
+
+
+
+
+# how many words/features the main sample has
+entire.sample.length = (slice.size - slice.overlap) * length(classification.results)
+  # if slice overlap was used, an additional tweak is needed
+  if(slice.overlap >0) {
+       entire.sample.length = entire.sample.length + slice.overlap
   }
-frequencies.training.set = freq.I.set.0.culling
-frequencies.test.set = freq.II.set.0.culling
-frequencies.both.sets = freq.table.both.sets
-#zscores.both.sets = zscores.table.both.sets
-features.actually.used = colnames(freq.table.both.sets[,1:mfw])
-features = mfw.list.of.all
 
-# what about removing some of the variables? (suppose there are thousands
-# of texts and dozens of features, and only 2GB of RAM...)
+
+# length of the assessed text + 10% 
+sample.length.with.margin = entire.sample.length + entire.sample.length * 0.1
+
+
+
+
+
+
+
+
+
+plot.current.task = function(){ 
+        # starting an empty plot
+        plot(NULL, xlim = c(0, sample.length.with.margin), ylim=c(0,1), type="n", 
+             axes=FALSE, ylab=ylabel, xlab="story development (in words)")
+        # adding an axis at the bottom
+        axis(1, las=0)
+        
+        # adding vertical lines for each "xmilestone" string included in tested sample
+        if(length(milestone.points) > 0){
+                identifiers = rep(unlist(strsplit("abcdefghijklmnopqrstuvwxyz","")),5)
+                identifiers = identifiers[1:length(milestone.points)]
+                if(classification.method == "delta" & length(attr(classification.results, "rankings")[1,]) > 2) {
+                    segments(milestone.points,0.62,milestone.points,0.8, lty=3)
+                } else {
+                    segments(milestone.points,0.47,milestone.points,0.8, lty=3)
+                }         
+                segments(milestone.points,-0.1,milestone.points,0.1, lty=3)
+                text(milestone.points,0.85, labels=identifiers, cex=0.7,srt=90)
+        }
+        
+        # position of the gray rectangle that shows the slice size
+        x = entire.sample.length-10*slice.size
+        
+        # drawing a rectangle; its length depending on the number of stripes
+        if(classification.method == "delta" & length(attr(classification.results, "rankings")[1,]) > 2) {
+            rect(x, c(-0.1,0.62), x+slice.size, c(0.13,1), border=NA, col=rgb(0.4,0.4,0.4,0.3))
+        } else {
+            rect(x, c(-0.1,0.47), x+slice.size, c(0.13,1), border=NA, col=rgb(0.4,0.4,0.4,0.3))
+        }
+        
+        # adding arrows to show the slice size
+        arrows(x, 0.95, x+slice.size, 0.95, length=0.05, code=3)
+        # depending on relative position of the rectangle, adding a label either
+        # on its right, or on the left side
+        if(x < entire.sample.length/2) {
+            text(x+slice.size, 0.95, paste(" ", slice.size, "words  "), cex=0.75, adj=c(0,0.5)) 
+        } else {
+            text(x, 0.95, paste(" ", slice.size, "words  "), cex=0.75, adj=c(1,0.5))
+        }
+        
+        
+        # using a very nice function rle() for identifying sequences of equal values
+        end.segment = as.numeric(names(rle(first.choice)$values)) + (slice.size / 2) - (slice.overlap / 2)
+        # replacing the last element with the text length 
+        end.segment[length(end.segment)] = entire.sample.length
+        #zero.point = (slice.size / 2) - (slice.overlap / 2)
+        zero.point = 0
+        # use the final points, but get rid of the last one and add a zero.point at the front
+        start.segment = c(zero.point, end.segment[1:(length(end.segment)-1)])
+        
+        
+        
+        # additional identifier for every single sample
+        if(add.ticks == TRUE) {
+          segments(as.numeric(names(classification.results)),0.14,as.numeric(names(classification.results)),0.12,
+          col=colors.first.choice[classification.results] )
+        }
+        
+        
+        
+        # strip I
+        
+        # identifying points where the style changes
+        style.change.points = end.segment[1:(length(end.segment)-1)]
+        # adding lines at each style break point
+        segments(style.change.points,0.14,style.change.points,0)
+        # drawing the strip: a sequence of colored rectangles
+        rect(start.segment,0.15,end.segment,0.3,border=NA, col=colors.first.choice[rle(first.choice)$values])
+        
+        
+        
+        # strip II
+        
+        end.segment = as.numeric(names(rle(second.choice)$values)) + (slice.size / 2) - (slice.overlap / 2)
+        end.segment[length(end.segment)] = entire.sample.length
+        zero.point = 0
+        start.segment = c(zero.point, end.segment[1:(length(end.segment)-1)])
+        # drawing the strip: a sequence of colored rectangles
+        rect(start.segment,0.31,end.segment,0.45,border=NA, col=colors.second.choice[rle(second.choice)$values])
+        
+        
+        
+        # strip III (for delta)
+        if(classification.method == "delta" && length(attr(classification.results, "rankings")[1,]) > 2) {
+                end.segment = as.numeric(names(rle(third.choice)$values)) + (slice.size / 2) - (slice.overlap / 2)
+                end.segment[length(end.segment)] = entire.sample.length
+                zero.point = 0
+                start.segment = c(zero.point, end.segment[1:(length(end.segment)-1)])
+                # drawing the strip: a sequence of colored rectangles
+                rect(start.segment,0.46,end.segment,0.6,border=NA, col=colors.third.choice[rle(third.choice)$values])
+        }
+        
+        
+        
+        if(classification.method == "svm" || classification.method == "nsc") {
+                
+                scores.raw = attr(classification.results, "scores")
+                rownames(scores.raw) = names(classification.results)
+                y = round(scores.raw, 1)
+                
+                # adjusting the svm decision values to the current scale {0,1}
+                if(classification.method == "svm") {
+                        y = (y + 1) / 2 
+                        y[y < 0.1] = 0
+                        y[y > 1] = 1
+                }
+                
+                # 1st candidate:
+                
+                end.segment = as.numeric(names(rle(y[,1])$values)) + (slice.size / 2) - (slice.size / 2)
+                end.segment[length(end.segment)] = entire.sample.length
+                zero.point = 0
+                start.segment = c(zero.point, end.segment[1:(length(end.segment)-1)])
+                # the area to be masked by a white rectangle, scaled to the stripe width
+                masking.range = (1 - rle(y[,1])$values) * 0.15
+                rect(start.segment,0.15,end.segment,masking.range+0.15,border=NA, col="white")
+                
+                # 2nd candidate:
+                
+                end.segment = as.numeric(names(rle(y[,2])$values)) + (slice.size / 2) - (slice.size / 2)
+                end.segment[length(end.segment)] = entire.sample.length
+                zero.point = 0
+                start.segment = c(zero.point, end.segment[1:(length(end.segment)-1)])
+                masking.range = (1 - rle(y[,2])$values) * 0.15
+                rect(start.segment,0.46,end.segment,0.46-masking.range,border=NA,col="white")
+                
+        }
+        
+        
+        abline(v=0, lty=2)
+        abline(v=entire.sample.length, lty=2)
+}
+
+
+
+
+if(classification.method == "delta") {
+  class.method = paste("delta-", distance.measure, sep="")
+} else {
+  class.method = classification.method
+}
+
+
+
+
+graph.filename = paste("rolling-", class.method, "_", mfw, "-features_", 
+                       slice.size, "-per-slice", sep="")
+
+plot.custom.width = 10 
+plot.custom.height = 4
+
+
+
+  if(display.on.screen == TRUE) {
+    plot.current.task()
+    }
+  if(write.pdf.file == TRUE) {
+    pdf(file = paste(graph.filename, ".pdf", sep=""),
+            width=plot.custom.width,height=plot.custom.height,
+            pointsize=plot.font.size)
+    plot.current.task()
+    dev.off()
+    }
+  if(write.jpg.file == TRUE) {
+    jpeg(filename = paste(graph.filename, ".jpg", sep=""), 
+            width=plot.custom.width,height=plot.custom.height,
+            units="in",res=300,pointsize=plot.font.size)
+    plot.current.task()
+    dev.off()
+    }
+  if(write.svg.file == TRUE) {
+    svg(filename = paste(graph.filename, ".svg", sep=""),
+            width=plot.custom.width,height=plot.custom.height,
+            pointsize=plot.font.size)
+    plot.current.task()
+    dev.off()
+    }
+  if(write.png.file == TRUE) {
+    png(filename = paste(graph.filename, ".png", sep=""), 
+            width=plot.custom.width,height=plot.custom.height,
+            units="in",res=300,pointsize=plot.font.size)
+    plot.current.task()
+    dev.off()
+    }
+#
 
 
 
@@ -1451,48 +1107,38 @@ features = mfw.list.of.all
 
 
 
-if(exists("misclassified.samples")) {
-  attr(misclassified.samples, "description") = "............"
-#  class(misclassified.samples) = "stylo.data"
+features.actually.used = colnames(training.set)
+frequencies.training.set = freq.I.set.0.culling
+frequencies.test.set = freq.II.set.0.culling
+
+classification.rankings = attr(classification.results, "rankings")
+classification.scores = attr(classification.results, "scores")
+
+
+
+
+
+
+if(exists("classification.results")) {
+  attr(classification.results, "description") = "classed assigned to particular test slices"
+  class(classification.results) = "stylo.data"
 }
-if(exists("cross.validation.summary") & length(cross.validation.summary) >0 ) {
-  attr(cross.validation.summary, "description") = "correctly guessed samples (cross-validation folds)"
-  if(dim(as.matrix(cross.validation.summary))[2] >1) {
-    class(cross.validation.summary) = c("stylo.data", "matrix")
-  }
+
+if(exists("classification.rankings")) {
+  attr(classification.rankings, "description") = "three first ranked candidates"
+  class(classification.rankings) = "stylo.data"
 }
-if(exists("success.rate")) {
-  attr(success.rate, "description") = "percentage of correctly guessed samples"
-  class(success.rate) = "stylo.data"
+if(exists("classification.scores")) {
+  attr(classification.scores, "description") = "final scores of classification"
+  class(classification.scores) = "stylo.data"
 }
-if(exists("overall.success.rate")) {
-  attr(overall.success.rate, "description") = "average percentage of correctly guessed samples"
-  class(overall.success.rate) = "stylo.data"
-}
-if(exists("distance.table")) {
-  attr(distance.table, "description") = "final distances between each pair of samples"
-  class(distance.table) = "stylo.data"
-}
-if(exists("nsc.distinctive.features")) {
-  attr(nsc.distinctive.features, "description") = "most discriminative features for NSC procedure"
-# this sucks
-#  class(nsc.distinctive.features) = "stylo.data"
-}
-if(exists("frequencies.both.sets")) {
-  attr(frequencies.both.sets, "description") = "frequencies of words/features accross the corpus"
-  class(frequencies.both.sets) = "stylo.data"
-}
-if(exists("features") & length(features) >0 ) {
+if(exists("features") & length(features) > 0 ) {
   attr(features, "description") = "features (e.g. words, n-grams, ...) applied to data"
   class(features) = "stylo.data"
 }
 if(exists("features.actually.used")) {
   attr(features.actually.used, "description") = "features (e.g. frequent words) actually analyzed"
   class(features.actually.used) = "stylo.data"
-}
-if(exists("zscores.both.sets")) {
-  attr(zscores.both.sets, "description") = "z-scored frequencies accross the whole corpus"
-  class(zscores.both.sets) = "stylo.data"
 }
 if(exists("frequencies.training.set")) {
   attr(frequencies.training.set, "description") = "frequencies of words/features in the training set"
@@ -1506,33 +1152,29 @@ if(exists("frequencies.test.set")) {
 
 # creating an object (list) that will contain the final results,
 # tables of frequencies, etc.etc.
-results.classify = list()
+results.rolling.classify = list()
 # elements that we want to add on this list
-variables.to.save = c("misclassified.samples",
-                      "success.rate",
-                      "overall.success.rate",
-                      "distance.table", 
-                      "nsc.distinctive.features",
+variables.to.save = c("classification.scores",
+                      "classification.results",
+                      "classification.rankings",
+                      "nearest.neighbors",
                       "features",
                       "features.actually.used",
-                      "zscores.both.sets",
-                      "frequencies.both.sets", 
                       "frequencies.training.set",
-                      "cross.validation.summary",
                       "frequencies.test.set")
 # checking if they really exist; getting rid of non-existing ones:
 filtered.variables = ls()[ls() %in% variables.to.save]
 # adding them on the list
 for(i in filtered.variables) {
-  results.classify[[i]] = get(i)
+  results.rolling.classify[[i]] = get(i)
 }
 
 
 
 # adding some information about the current function call
 # to the final list of results
-results.classify$call = match.call()
-results.classify$name = call("classify")
+results.rolling.classify$call = match.call()
+results.rolling.classify$name = call("rolling.classify")
 
 
 # This assings the list of final resutls to the class "stylo.resutls";
@@ -1540,7 +1182,7 @@ results.classify$name = call("classify")
 # rolling.delta() and oppose(). See the files "print.stylo.results.R"
 # and "summary.stylo.results.R" (no help files are provided, since
 # these two functions are not visible for the users).
-class(results.classify) = "stylo.results"
+class(results.rolling.classify) = "stylo.results"
 
 
 
@@ -1551,7 +1193,6 @@ class(results.classify) = "stylo.results"
 setwd(original.path)
 
 # return the value of the function 
-return(results.classify)
+return(results.rolling.classify)
+
 }
-
-

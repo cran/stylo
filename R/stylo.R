@@ -16,8 +16,7 @@ function(gui = TRUE,
          parsed.corpus = NULL,
          features = NULL,
          path = NULL, 
-         corpus.dir = "corpus",
-         network = FALSE, ...) {
+         corpus.dir = "corpus", ...) {
 
 
 
@@ -72,7 +71,7 @@ if (gui == TRUE) {
       } else {
         cat("\n")
         cat("GUI could not be launched -- default settings will be used;\n")
-        cat("otherwise please pass your variables as command-line agruments\n")
+        cat("otherwise please pass your variables as command-line agruments\n\n")
       }
 }
 
@@ -171,7 +170,6 @@ splitting.rule = variables$splitting.rule
 preserve.case = variables$preserve.case
 encoding = variables$encoding
 stop.words = variables$stop.words
-
 sample.overlap = variables$sample.overlap
 number.of.samples = variables$number.of.samples
 
@@ -857,7 +855,8 @@ for(j in (culling.min/culling.incr):(culling.max/culling.incr)) {
         current.culling = j * culling.incr
 
         # applying culling
-        table.with.all.freqs = culling(frequencies.0.culling, current.culling)
+        table.with.all.freqs = perform.culling(frequencies.0.culling, 
+                                        current.culling)
 
 
         # additionally, deleting pronouns (if applicable)
@@ -1489,7 +1488,6 @@ all.connections = all.connections + connections
 }
 ##############################################
 ##############################################
-
 
 
 

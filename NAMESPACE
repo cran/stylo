@@ -1,4 +1,5 @@
 
+
 import(
   tcltk, 
   tcltk2, 
@@ -13,7 +14,6 @@ import(
 export(
   assign.plot.colors,
   classify,
-  culling,
   define.plot.area,
   delete.markup,
   delete.stop.words,
@@ -26,13 +26,23 @@ export(
   make.samples,
   make.table.of.frequencies,
   oppose,
+  perform.culling,
+  perform.delta,
+  perform.knn,
+  perform.naivebayes,
+  perform.nsc,
+  perform.svm,
+  rolling.classify,
   rolling.delta,
   stylo.default.settings,
   stylo.pronouns,
   stylo,
   txt.to.features,
   txt.to.words.ext,
-  txt.to.words
+  txt.to.words,
+  zeta.chisquare,
+  zeta.craig,
+  zeta.eder
 )
 
 S3method(print, stylo.results)
@@ -40,3 +50,5 @@ S3method(print, stylo.corpus)
 S3method(print, stylo.data)
 S3method(summary, stylo.results)
 S3method(summary, stylo.corpus)
+
+

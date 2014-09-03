@@ -6,7 +6,7 @@
 # (ii) a percentage of texts that need to have a given word to save it
 # #################################################
 
-culling <- 
+perform.culling <- 
 function(input.table, culling.level = 0) {
         # checking if any variable names exist
         if(length(colnames(input.table)) < 1) {
@@ -23,7 +23,7 @@ function(input.table, culling.level = 0) {
                                           length(nonzero.values[,y])
                                         >= culling.level/100) )
         }
-        
+
         # the culled list has no word-identification; let's change it:
         names(words.after.culling) = colnames(input.table)
 
@@ -33,8 +33,8 @@ function(input.table, culling.level = 0) {
  
         # finally, applying the function delete.stop.words()
         culled.table = delete.stop.words(input.table, words.to.be.culled)
-        
-        return(culled.table)
+
+return(culled.table)
 }
 
 

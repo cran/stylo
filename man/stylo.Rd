@@ -10,8 +10,7 @@ stylistics. For a more detailed description, refer to HOWTO available at:
 }
 \usage{
 stylo(gui = TRUE, frequencies = NULL, parsed.corpus = NULL,
-      features = NULL, path = NULL, corpus.dir = "corpus", 
-      network = FALSE, ...)
+      features = NULL, path = NULL, corpus.dir = "corpus", ...)
 }
 \arguments{
   \item{gui}{an optional argument; if switched on, a simple yet effective 
@@ -22,7 +21,7 @@ stylo(gui = TRUE, frequencies = NULL, parsed.corpus = NULL,
     most frequent words, across a number of text samples. It can be either 
     an R object (matrix or data frame), or a filename containing 
     tab-delimited data. If you use an R object, make sure that the rows
-    contain samples, and the columns - variables (words). If you use
+    contain samples, and the columns -- variables (words). If you use
     an external file, the variables should go vertically (i.e. in rows):
     this is because files containing vertically-oriented tables are far 
     more flexible and easily editable using, say, Excel or any text editor.
@@ -49,13 +48,13 @@ stylo(gui = TRUE, frequencies = NULL, parsed.corpus = NULL,
     contains the corpus text files. If not specified, the default 
     subdirectory \code{corpus} will be used. This option is immaterial when
     an external corpus and/or external table with frequencies is loaded.}
-    
-  \item{network}{an optional argument for producing stylometric bootstrap
-    consensus networks (Eder, forthcoming); the function saves a csv file,
-    containing a list of nodes that can be loaded into, say, Gephi.}
 
   \item{...}{any variable produced by \code{stylo.default.settings}
-    can be set here, in order to overwrite the default values.}
+    can be set here, in order to overwrite the default values. An example
+    of such a variable is \code{network = TRUE} (switched off as default)
+    for producing stylometric bootstrap consensus networks (Eder, forthcoming); 
+    the function saves a csv file, containing a list of nodes that can be 
+    loaded into, say, Gephi.}
 }
 \details{
 If no additional argument is passed, then the functions tries to load

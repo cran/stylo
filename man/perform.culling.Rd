@@ -1,10 +1,10 @@
-\name{culling}
-\alias{culling}
+\name{perform.culling}
+\alias{perform.culling}
 \title{Exclude variables (e.g. words, n-grams) from a frequency table that are too characteristic for some samples}
 \description{Culling refers to the automatic manipulation of the wordlist (proposed by Hoover 2004a, 2004b). The culling values specify the degree to which words that do not appear in all the texts of a corpus will be removed. A culling value of 20 indicates that words that appear in at least 20\% of the texts in the corpus will be considered in the analysis. A culling setting of 0 means that no words will be removed; a culling setting of 100 means that only those words will be used in the analysis that appear in all texts of the corpus at least once.}
 
 \usage{
-culling(input.table, culling.level = 0)
+perform.culling(input.table, culling.level = 0)
 }
 
 \arguments{
@@ -42,7 +42,7 @@ colnames(my.data.table) = c("the", "of", "in", "she", "me", "you",
 print(my.data.table)
 
 # selecting the words that appeared in at laest 50% of samples:
-culling(my.data.table, 50)        
+perform.culling(my.data.table, 50)        
 
 }
 %\keyword{text processing}

@@ -23,7 +23,7 @@ classify(gui = TRUE, training.frequencies = NULL, test.frequencies = NULL,
     training set). It can be either 
     an R object (matrix or data frame), or a filename containing 
     tab-delimited data. If you use an R object, make sure that the rows
-    contain samples, and the columns - variables (words). If you use
+    contain samples, and the columns -- variables (words). If you use
     an external file, the variables should go vertically (i.e. in rows):
     this is because files containing vertically-oriented tables are far 
     more flexible and easily editable using, say, Excel or any text editor. 
@@ -32,7 +32,7 @@ classify(gui = TRUE, training.frequencies = NULL, test.frequencies = NULL,
 
   \item{test.frequencies}{using this optional argument, one can 
     load a custom table containing frequencies/counts for the 
-    test set). Further details: immediately above.}
+    test set. Further details: immediately above.}
 
   \item{training.corpus}{another option is to pass a pre-processed corpus
     as an argument (here: the training set). It is assumed that this object 
