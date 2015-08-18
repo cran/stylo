@@ -171,7 +171,7 @@ encoding = variables$encoding
 stop.words = variables$stop.words
 sample.overlap = variables$sample.overlap
 number.of.samples = variables$number.of.samples
-
+custom.graph.filename = variables$custom.graph.filename
 
 
 # #############################################################################
@@ -767,7 +767,7 @@ var.name(use.existing.wordlist)
 var.name(use.custom.list.of.files)
 var.name(analysis.type)
 var.name(consensus.strength)
-var.name(distance.measure)
+#var.name(distance.measure)
 var.name(sampling)
 var.name(sample.size)
 var.name(number.of.samples)
@@ -946,27 +946,54 @@ if((analysis.type == "CA") || (analysis.type == "BCT") || (analysis.type == "MDS
 # a short message on the screen about distance calculations (when appropriate):
 if((analysis.type == "CA") || (analysis.type == "BCT") || (analysis.type == "MDS")){
 
+
+
+# starting some variables that will be overwritten (unless a custom distance is used)
+distance.name.on.graph = distance.measure
+distance.name.on.file = distance.measure
+
+
   if(distance.measure == "CD") {
     cat("Calculating classic Delta distances... \n")
+    distance.name.on.graph = "Classic Delta distance"
+    distance.name.on.file = "Classic Delta"
   }
   if(distance.measure == "AL") {
     cat("Calculating Argamon's Delta distances... \n")
+    distance.name.on.graph = "Argamon's Delta distance"
+    distance.name.on.file = "Argamon's Delta"
   }
   if(distance.measure == "ED") {
     cat("Calculating Eder's Delta distances... \n")
+    distance.name.on.graph = "Eder's Delta distance"
+    distance.name.on.file = "Eder's Delta"
   }
   if(distance.measure == "ES") {
     cat("Calculating Eder's Simple distances... \n")
+    distance.name.on.graph = "Eder's Simple distance"
+    distance.name.on.file = "Eder's Simple"    
   }
   if(distance.measure == "MH") {
     cat("Calculating Manhattan distances... \n")
+    distance.name.on.graph = "Manhattan distance"
+    distance.name.on.file = "Manhattan"
   }
   if(distance.measure == "CB") {
     cat("Calculating Canberra distances... \n")
+    distance.name.on.graph = "Canberra distance"
+    distance.name.on.file = "Canberra"
   }
   if(distance.measure == "EU") {
     cat("Calculating Euclidean distances... \n")
+    distance.name.on.graph = "Euclidean distance"
+    distance.name.on.file = "Euclidean"
   }
+  if(distance.measure == "dist.cosine") {
+    cat("Calculating Cosine distances... \n")
+    distance.name.on.graph = "Cosine distance"
+    distance.name.on.file = "Cosine"
+  }
+
 }
 
 
@@ -994,63 +1021,65 @@ cat(mfw, " ")
 # #################################################
 
 if((analysis.type == "CA") || (analysis.type == "BCT") || (analysis.type == "MDS")){
-  # calculating Delta distances to a distance matrix
-  if(distance.measure == "CD") {
-    distance.name.on.graph = "Classic Delta distance"
-    distance.name.on.file = "Classic Delta"
-    distance.table = 
-        as.matrix(dist(table.with.all.zscores[,1:mfw],
-        method="manhattan")) / mfw
+
+input.freq.table = table.with.all.freqs[,1:mfw]
+
+
+supported.measures = c("dist.euclidean", "dist.manhattan", "dist.canberra",
+                       "dist.delta", "dist.eder", "dist.argamon",
+                       "dist.simple", "dist.cosine")
+
+
+
+# if the requested distance name is confusing, stop
+if(length(grep(distance.measure, supported.measures)) > 1 ) {
+    stop("Ambiguous distance method: which one did you want to use, really?")
+
+# if the requested distance name was not found invoke a custom plugin
+} else if(length(grep(distance.measure, supported.measures)) == 0 ){
+
+    # first, check if a requested custom function exists 
+    if(is.function(get(distance.measure)) == TRUE) {
+        # if OK, then use the value of the variable 'distance.measure' to invoke 
+        # the function of the same name, with x as its argument
+        distance.table = do.call(distance.measure, list(x = input.freq.table))
+        # check if the invoked function did produce a distance
+        if(class(distance.table) != "dist") {
+            # say something nasty here, if it didn't:
+            stop("it wasn't a real distance measure function applied, was it?")
+        }
     }
 
-  # calculating Argamon's "Linear Delta"
-  if(distance.measure == "AL") {
-    distance.name.on.graph = "Argamon's Delta distance"
-    distance.name.on.file = "Argamon's Delta"
-    distance.table = 
-        as.matrix(dist(table.with.all.zscores[,1:mfw],
-        method="euclidean")) / mfw
-    }
+# when the chosen distance measure is among the supported ones, use it
+} else {
 
-  # calculating Delta distances with Eder's modifications
-  if(distance.measure == "ED") {
-    distance.name.on.graph = "Eder's Delta distance"
-    distance.name.on.file = "Eder's Delta"
-    zscores.plus.e.value = t(t(table.with.all.zscores[,1:mfw])*((1+mfw:1)/mfw))
-    distance.table = as.matrix(dist(zscores.plus.e.value,method="manhattan"))
-    }
+    # extract the long name of the distance (the "official" name) 
+    distance = supported.measures[grep(distance.measure, supported.measures)]
+    # then check if this is one of standard methods supported by dist()
+    if(distance %in% c("dist.manhattan", "dist.euclidean", "dist.canberra")) {
+         # get rid of the "dist." in the distance name
+         distance = gsub("dist.", "", distance)
+         # apply a standard distance, using the generic dist() function
+         distance.table = as.matrix(dist(input.freq.table, method = distance))
+    # then, check for the non-standard methods but still supported by Stylo
+    } else if(distance %in% c("dist.simple", "dist.cosine")) {
 
-  # calculating Eder's Simple distance to a distance matrix
-  if(distance.measure == "ES") {
-    distance.table = 
-       as.matrix(dist(sqrt(table.with.all.freqs[,1:mfw]),method="manhattan"))
-    distance.name.on.graph = "Eder's Simple distance"
-    distance.name.on.file = "Eder's Simple"
+         # invoke one of the distance measures functions from Stylo    
+         distance.table = do.call(distance, list(x = input.freq.table))
+    
+    } else {
+         # invoke one of the distances supported by 'stylo'; this is slightly
+         # different from the custom functions invoked above, since it uses
+         # another argument: z-scores can be calculated outside of the function
+         distance.table = do.call(distance, list(x = table.with.all.zscores[,1:mfw], scale = FALSE))
     }
+    
+} 
 
-  # calculating Manhattan distance to a distance matrix
-  if(distance.measure == "MH") {
-    distance.name.on.graph = "Manhattan distance"
-    distance.name.on.file = "Manhattan"
-    distance.table = 
-         as.matrix(dist(table.with.all.freqs[,1:mfw],method="manhattan"))
-    }
+# convert the table to the format of matrix
+distance.table = as.matrix(distance.table)
 
-  # calculating Canberra distance to a distance matrix
-  if(distance.measure == "CB") {
-    distance.name.on.graph = "Canberra distance"
-    distance.name.on.file = "Canberra"
-    distance.table = 
-         as.matrix(dist(table.with.all.freqs[,1:mfw],method="canberra"))
-    }
 
-  # calculating Euclidean distance to a distance matrix
-  if(distance.measure == "EU") {
-    distance.name.on.graph = "Euclidean distance"
-    distance.name.on.file = "Euclidean"
-    distance.table = 
-         as.matrix(dist(table.with.all.freqs[,1:mfw],method="euclid"))
-    }
 
   # replaces the names of the samples (the extension ".txt" is cut off)
   rownames(distance.table)=gsub("(\\.txt$)||(\\.xml$)||(\\.html$)||(\\.htm$)",
@@ -1212,11 +1241,12 @@ if(analysis.type == "tSNE") {
     short.name.of.the.method = "t-SNE"
     distance.name.on.file = "tSNE"
     distance.name.on.graph = "t-SNE"
-    graph.title = ""
     plot.current.task = function(){
         ecb = function(x,y){
             if(titles.on.graphs == TRUE) {
-                graph.title = paste(basename(getwd()),"\nt-SNE visualisation")
+                graph.title = paste(graph.title,"\nt-SNE visualisation")
+            } else {
+                graph.title = ""
             }
             plot(x, t='n', main=graph.title, xlab="", ylab="", yaxt="n", xaxt="n")
             text(x,rownames(table.with.all.freqs[,1:mfw]), cex=0.3)
@@ -1260,9 +1290,9 @@ if(analysis.type == "PCV" || analysis.type == "PCR") {
       if(text.id.on.graphs == "points" || text.id.on.graphs == "both") {
         plot(xy.coord,
              type="p",
-             xlim=plot.area[[1]],ylim=plot.area[[2]],
-             xlab="",ylab=PC2_lab,
-             main = graph.title,sub = paste(PC1_lab,"\n",graph.subtitle),
+             xlim=plot.area[[1]], ylim=plot.area[[2]],
+             xlab="", ylab=PC2_lab,
+             main = graph.title, sub = paste(PC1_lab,"\n",graph.subtitle),
              col=colors.of.pca.graph,
              lwd=plot.line.thickness) 
       }
@@ -1372,17 +1402,26 @@ if(titles.on.graphs == TRUE) {
 
 
 # name of the output file (strictly speaking: basename) for graphs
-graph.filename = paste(basename(getwd()),short.name.of.the.method,mfw.info,
-                       "MFWs_Culled",culling.info,pronouns.info,
-                       distance.name.on.file,"C",consensus.strength,start.at.info, sep="_")
-  if(analysis.type == "BCT") {
-    graph.filename = paste(basename(getwd()),short.name.of.the.method,mfw.info,
-                       "MFWs_Culled",culling.info,pronouns.info,
-                       distance.name.on.file,"C",consensus.strength,start.at.info, sep="_") 
-  } else {
-    graph.filename = paste(basename(getwd()),short.name.of.the.method,mfw.info,
-                       "MFWs_Culled",culling.info,pronouns.info, distance.name.on.file,start.at.info, sep="_") 
+
+# check if a custom filename has been set
+if(is.character(custom.graph.filename) == TRUE & 
+         length(custom.graph.filename) > 0) {
+    # if a custom file name exists, then use it
+    graph.filename = custom.graph.filename
+} else {
+  # otherwise, combine some information into the filename
+    if(analysis.type == "BCT") {
+        graph.filename = paste(basename(getwd()), short.name.of.the.method,
+                         mfw.info, "MFWs_Culled", culling.info,pronouns.info,
+                         distance.name.on.file, "C", consensus.strength,
+                         start.at.info, sep="_") 
+    } else {
+        graph.filename = paste(basename(getwd()), short.name.of.the.method,
+                         mfw.info, "MFWs_Culled", culling.info,pronouns.info, 
+                         distance.name.on.file, start.at.info, sep="_") 
+    }
 }
+
 
 # #################################################
 # plotting 
@@ -1395,28 +1434,28 @@ if(analysis.type != "BCT") {
     plot.current.task()
     }
   if(write.pdf.file == TRUE) {
-    pdf(file = paste(graph.filename,"%03d",".pdf",sep=""),
+    pdf(file = paste(graph.filename,"_%03d",".pdf",sep=""),
             width=plot.custom.width,height=plot.custom.height,
             pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.jpg.file == TRUE) {
-    jpeg(filename = paste(graph.filename,"%03d",".jpg",sep=""), 
+    jpeg(filename = paste(graph.filename,"_%03d",".jpg",sep=""), 
             width=plot.custom.width,height=plot.custom.height,
             units="in",res=300,pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.svg.file == TRUE) {
-    svg(filename = paste(graph.filename,"%03d",".svg",sep=""),
+    svg(filename = paste(graph.filename,"_%03d",".svg",sep=""),
             width=plot.custom.width,height=plot.custom.height,
             pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.png.file == TRUE) {
-    png(filename = paste(graph.filename,"%03d",".png",sep=""), 
+    png(filename = paste(graph.filename,"_%03d",".png",sep=""), 
             width=plot.custom.width,height=plot.custom.height,
             units="in",res=300,pointsize=plot.font.size)
     plot.current.task()
@@ -1660,28 +1699,28 @@ if(length(bootstrap.list) <= 2) {
     plot.current.task()
     }
   if(write.pdf.file == TRUE) {
-    pdf(file = paste(graph.filename,"%03d",".pdf",sep=""),
+    pdf(file = paste(graph.filename,"_%03d",".pdf",sep=""),
          width=plot.custom.width,height=plot.custom.height,
          pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.jpg.file == TRUE) {
-    jpeg(filename = paste(graph.filename,"%03d",".jpg",sep=""),
+    jpeg(filename = paste(graph.filename,"_%03d",".jpg",sep=""),
          width=plot.custom.width,height=plot.custom.height,
          units="in",res=300,pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.svg.file == TRUE) {
-    svg(filename=paste(graph.filename,"%03d",".svg",sep=""), 
+    svg(filename=paste(graph.filename,"_%03d",".svg",sep=""), 
          width=plot.custom.width,height=plot.custom.height,
          pointsize=plot.font.size)
     plot.current.task()
     dev.off()
     }
   if(write.png.file == TRUE) {
-    png(filename = paste(graph.filename,"%03d",".png",sep=""), 
+    png(filename = paste(graph.filename,"_%03d",".png",sep=""), 
          width=plot.custom.width,height=plot.custom.height,
          units="in",res=300,pointsize=plot.font.size)
     plot.current.task()

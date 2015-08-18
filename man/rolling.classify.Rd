@@ -15,7 +15,9 @@ rolling.classify(gui = FALSE, training.corpus.dir = "reference_set",
          test.corpus = NULL,  features = NULL, path = NULL, 
          slice.size = 5000, slice.overlap = 4500, 
          training.set.sampling = "no.sampling", mfw = 100, culling = 0, 
-         milestone.points = NULL, add.ticks = FALSE, ...)
+         milestone.points = NULL, milestone.labels = NULL, 
+         plot.legend = TRUE, add.ticks = FALSE, 
+         ...)
 }
 \arguments{
   \item{gui}{an optional argument; if switched on, a simple yet effective 
@@ -77,9 +79,9 @@ rolling.classify(gui = FALSE, training.corpus.dir = "reference_set",
     is set using this parameter: default is 5,000 words. The samples 
     are allowed to partially overlap (see the next parameter). }
 
-  \item{slice.overlap}{if we specifies a \code{slice.size} of 5,000 
+  \item{slice.overlap}{if one specifies a \code{slice.size} of 5,000 
     and a \code{slice.overlap} of 4,500 (which is default), then 
-    the first sample of a text contains words 1--5,000, the second 
+    the first extracted sample contains words 1--5,000, the second 
     501--5,500, the third sample 1001--6,000, and so forth.}
   
   \item{training.set.sampling}{sometimes, it makes sense to split training 
@@ -101,7 +103,14 @@ rolling.classify(gui = FALSE, training.corpus.dir = "reference_set",
     or specify the break points using this parameter. E.g., to add
     two lines at 10,000 words and 15,000 words, use
     \code{milestone.points = c(10000, 15000)}.}
-  
+
+  \item{milestone.labels}{when milestone points are used (see immediately 
+    above), they are automatically labelled using lowercase letters:
+    "a", "b", "c" etc. However, one can replace them with custom labels,
+    e.g. \code{milestone.labels = c("Act I", "Act II")}.}
+
+  \item{plot.legend}{self-evident. Default: \code{TRUE}.}
+
   \item{add.ticks}{a graphical parameter: consider adding tiny ticks 
     (short horizontal lines) to see the density of sampling. Default:
   \code{FALSE}.}
@@ -121,6 +130,12 @@ a list of variables, including tables of word frequencies, vector of features
 used, a distance table and some more stuff. Additionally, depending on which 
 options have been chosen, the function produces a number of files used to save 
 the results, features assessed, generated tables of distances, etc.
+}
+\references{
+Eder, M. (2015). Rolling stylometry. "Digital Scholarship in the Humanities", 
+    30, Advance Access published April 6, 2015 (doi: 10.1093/llc/fqv010).
+
+Eder, M. (2014). Testing rolling stylometry. \url{https://goo.gl/f0YlOR}.
 }
 
 

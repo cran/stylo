@@ -12,11 +12,11 @@
 # "English.all", "Latin.corr", ...
 # #################################################
 
-txt.to.words.ext <-
-function(input.text, 
-         language="English", 
+txt.to.words.ext = function(input.text, 
+         language = "English", 
          splitting.rule = NULL,
          preserve.case = FALSE) {
+
   # if a custom splitting rule was detected...
   if(length(splitting.rule) > 0) {
       # sanity check
@@ -33,21 +33,22 @@ function(input.text,
   } else {
     # Loading the file; optionally, fiddling with apostrophes and contractions:    #
     # This is the standard procedure of splitting input texts
-    if(language == "CJK") {
+    if(tolower(language) == "cjk") {
       tokenized.text = txt.to.words(input.text, 
                                     splitting.rule="[^\U4E00-\U9FFF]+",
                                     preserve.case=TRUE)
       }
-    if(language != "English.contr" & language != "English.all" & language != "CJK") {
-      tokenized.text = txt.to.words(input.text, preserve.case=preserve.case)
+    if(tolower(language) != "english.contr" & 
+       tolower(language) != "english.all" & tolower(language) != "cjk" )  {
+    tokenized.text = txt.to.words(input.text, preserve.case=preserve.case)
     }
     # if the Latin option with adjusting the v/u letters is on,
     # this smashes the distinction and converts both types to the letter u
-    if(language == "Latin.corr") {
-      tokenized.text = gsub("v","u",tokenized.text)
+    if(tolower(language) == "latin.corr") {
+      tokenized.text = gsub("v", "u", tokenized.text)
     }
     # this code is used for English corpora only
-    if(language == "English.contr" | language == "English.all") {
+    if(tolower(language) == "english.contr" | tolower(language) == "english.all") {
       # turning into lowercase, if applicable
         if(preserve.case == FALSE) {
           input.text = tolower(input.text)
@@ -64,11 +65,11 @@ function(input.text,
       tokenized.text = gsub("[-]{2,5}"," -- ",tokenized.text)
       # depending on which option was swithed on, either the contractions are
       # kept, or all the peculiarities, i.e. both contractions and hyphens
-        if(language == "English.contr") {
+        if(tolower(language) == "english.contr") {
           tokenized.text=c(unlist(strsplit(tokenized.text,
                     "[^A-Za-z\U00C0-\U00FF\U0100-\U01BF\U01C4-\U02AF^]+")))
         }
-        if(language == "English.all") {
+        if(tolower(language) == "english.all") {
           tokenized.text=c(unlist(strsplit(tokenized.text,
                     "[^A-Za-z\U00C0-\U00FF\U0100-\U01BF\U01C4-\U02AF^-]+")))
           # trying to clean the remaining dashes:

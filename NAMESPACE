@@ -11,21 +11,37 @@ import(
   tsne
 )
 
+importFrom(grDevices, dev.off, gray, jpeg, pdf, png, rgb, svg)
+importFrom(graphics, abline, arrows, axis, barplot, box, boxplot, 
+             layout, legend, lines, mtext, par, plot, polygon, rect, 
+             segments, text, title)
+importFrom(stats, as.dendrogram, as.dist, biplot, chisq.test, cmdscale, 
+             dendrapply, dist, hclust, is.leaf, prcomp, predict, sd, 
+             wilcox.test)
+importFrom(utils, head, read.table, write.csv, write.table)
+
 export(
   assign.plot.colors,
   classify,
   define.plot.area,
   delete.markup,
   delete.stop.words,
+  dist.argamon,
+  dist.cosine,
+  dist.delta,
+  dist.eder,
+  dist.simple,
   gui.classify,
   gui.oppose,
   gui.stylo,
   load.corpus.and.parse,
   load.corpus,
+  make.frequency.list,
   make.ngrams,
   make.samples,
   make.table.of.frequencies,
   oppose,
+  parse.pos.tags,
   perform.culling,
   perform.delta,
   perform.knn,

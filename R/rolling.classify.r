@@ -16,6 +16,8 @@ function(gui = FALSE,
          mfw = 100,
          culling = 0,
          milestone.points = NULL,
+         milestone.labels = NULL,
+         plot.legend = TRUE,
          add.ticks = FALSE, ...) {
 
 
@@ -23,6 +25,15 @@ function(gui = FALSE,
 # if any command-line arguments have been passed by a user, they will
 # be stored on the following list and used to overwrite the defaults
 passed.arguments = list(...)
+
+
+
+
+
+
+# saving custom height and width of the final picture (if specified by the user)
+save.plot.custom.width = passed.arguments$plot.custom.width
+save.plot.custom.height = passed.arguments$plot.custom.height
 
 
 
@@ -120,8 +131,8 @@ number.of.candidates = variables$number.of.candidates
 outputfile = variables$outputfile
 passed.arguments = variables$passed.arguments
 pca.visual.flavour = variables$pca.visual.flavour
-plot.custom.height = variables$plot.custom.height
-plot.custom.width = variables$plot.custom.width
+#plot.custom.height = variables$plot.custom.height
+#plot.custom.width = variables$plot.custom.width
 plot.font.size = variables$plot.font.size
 plot.line.thickness = variables$plot.line.thickness
 plot.options.reset = variables$plot.options.reset
@@ -159,6 +170,29 @@ cv.folds = variables$cv.folds
 stop.words = variables$stop.words
 sample.overlap = variables$sample.overlap
 number.of.samples = variables$number.of.samples
+custom.graph.filename = variables$custom.graph.filename
+show.features = variables$show.features
+
+# #############################################################################
+# additional options for dealing with custom picture size
+
+# additional settings relavant to rolling.classify only
+# (overriding the custom settings for the size of final graphs)
+plot.custom.width = 10
+plot.custom.height = 4
+
+# these are overwritten, if the user specified some values
+if(length(save.plot.custom.width) > 0) {
+      # if the saved value exists, apply it to the main variable
+      plot.custom.width = save.plot.custom.width
+}
+# these are overwritten, if the user specified some values
+if(length(save.plot.custom.height) > 0) {
+      # if the saved value exists, apply it to the main variable
+      plot.custom.height = save.plot.custom.height
+}
+
+
 
 
 
@@ -194,7 +228,6 @@ if(number.of.candidates < 1) {
   number.of.candidates = 1
   number.of.candidates = round(number.of.candidates)
   }
-
 
 
 
@@ -500,7 +533,7 @@ if(corpus.exists == FALSE) {
 
 
 # loading the sample to be rolled through, looking for milestone marks;
-# don't mint stupid names of variables (e.g. 'corpus.of.secondary.set')
+# don't mind stupid names of variables (e.g. 'corpus.of.secondary.set')
 corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
                            corpus.dir = test.corpus.dir,
                            encoding = encoding,
@@ -508,14 +541,11 @@ corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
                            language = corpus.lang,
                            splitting.rule = splitting.rule,
                            preserve.case = preserve.case,
-#                           sample.size = slice.size,
                            sampling = "no.sampling"
-#                           features = analyzed.features,
-#                           ngram.size = ngram.size
                            )
 
 milestone.points = grep("xmilestone", corpus.of.secondary.set[[1]])
-
+text.length = length(corpus.of.secondary.set[[1]])
 
 
 # once more: loading the sample to be rolled through
@@ -826,7 +856,8 @@ if(tolower(classification.method) == "svm") {
 }
 
 if(tolower(classification.method) == "nsc") {
-  classification.results = perform.nsc(training.set, test.set)
+  classification.results = perform.nsc(training.set, test.set, 
+                                       show.features = show.features)
   ylabel = "NSC classification"
 }
 
@@ -842,7 +873,8 @@ if(tolower(classification.method) == "naivebayes") {
 
 
 
-# positioning in plots: replacing dummy sample names with their positions
+# Positioning in plots: replacing dummy sample names with their positions;
+# the general rule is as follows:
 # 1th: (slice.size / 2)
 # 2nd: (slice.size / 2) + (slice.size - slice.overlap)
 # 3rd: (slice.size / 2) + (slice.size - slice.overlap) + (slice.size - slice.overlap)
@@ -866,11 +898,10 @@ names(classification.results) =  c(round(slice.size/2) +
 # plotting
 
 
-
-# it should be claases rather than mere rownames!!!!!!!!!!!!!!!!!!!!
-colors.first.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.99)
-colors.second.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.6)
-colors.third.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.5)
+# it should be classes rather than mere rownames!!!!!!!!!!!!!!!!!!!!
+colors.first.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.99, col = colors.on.graphs)
+colors.second.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.6, col = colors.on.graphs)
+colors.third.choice = assign.plot.colors((unique(gsub("_.+","",rownames(training.set)))), opacity=0.3, col = colors.on.graphs)
 
 
 
@@ -897,7 +928,7 @@ entire.sample.length = (slice.size - slice.overlap) * length(classification.resu
   }
 
 
-# length of the assessed text + 10% 
+# size of the assessed dataset (in tokens) + 10% 
 sample.length.with.margin = entire.sample.length + entire.sample.length * 0.1
 
 
@@ -917,15 +948,19 @@ plot.current.task = function(){
         
         # adding vertical lines for each "xmilestone" string included in tested sample
         if(length(milestone.points) > 0){
-                identifiers = rep(unlist(strsplit("abcdefghijklmnopqrstuvwxyz","")),5)
-                identifiers = identifiers[1:length(milestone.points)]
+                if(length(milestone.labels) == 0) {
+                    identifiers = rep(unlist(strsplit("abcdefghijklmnopqrstuvwxyz","")),5)
+                    identifiers = identifiers[1:length(milestone.points)]
+                } else {
+                    identifiers = milestone.labels
+                }
                 if(classification.method == "delta" & length(attr(classification.results, "rankings")[1,]) > 2) {
                     segments(milestone.points,0.62,milestone.points,0.8, lty=3)
                 } else {
                     segments(milestone.points,0.47,milestone.points,0.8, lty=3)
                 }         
                 segments(milestone.points,-0.1,milestone.points,0.1, lty=3)
-                text(milestone.points,0.85, labels=identifiers, cex=0.7,srt=90)
+                text(milestone.points, 0.85, labels=identifiers, cex=0.7, srt=90, adj=c(0,1))
         }
         
         # position of the gray rectangle that shows the slice size
@@ -1037,8 +1072,28 @@ plot.current.task = function(){
         }
         
         
+        # adding two vertical lines at the beginning and at the end
         abline(v=0, lty=2)
         abline(v=entire.sample.length, lty=2)
+        
+        
+        # adding an optional legend on the right side of the plot
+        if(plot.legend == TRUE) {
+                legend(x = entire.sample.length, y = 0.95,
+                       legend = names(colors.first.choice), 
+                       col = colors.first.choice,
+                       bty = "n",
+                       cex=0.75,
+                       lwd = 5)
+        }
+        
+        
+        # adding optional ranking hints
+        if(classification.method == "delta" && plot.legend == TRUE) {
+                text(0, 0.225, expression(1^ st), adj = c(1.8,0.5))
+                text(0, 0.38, expression(2^ nd), adj = c(1.5,0.5))
+                text(0, 0.53, expression(3^ rd), adj = c(1.5,0.5))
+        }
 }
 
 
@@ -1052,12 +1107,17 @@ if(classification.method == "delta") {
 
 
 
+# check if a custom filename has been set
+if(is.character(custom.graph.filename) == TRUE & 
+         length(custom.graph.filename) > 0) {
+    # if a custom file name exists, then use it
+    graph.filename = custom.graph.filename
+} else {
+  graph.filename = paste("rolling-", class.method, "_", mfw, "-features_", 
+                         slice.size, "-per-slice", sep="")
+}
 
-graph.filename = paste("rolling-", class.method, "_", mfw, "-features_", 
-                       slice.size, "-per-slice", sep="")
 
-plot.custom.width = 10 
-plot.custom.height = 4
 
 
 
@@ -1158,6 +1218,8 @@ variables.to.save = c("classification.scores",
                       "classification.rankings",
                       "nearest.neighbors",
                       "features",
+                      "milestone.points",
+                      "text.length",
                       "features.actually.used",
                       "frequencies.training.set",
                       "frequencies.test.set")
