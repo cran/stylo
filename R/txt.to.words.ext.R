@@ -54,7 +54,10 @@ txt.to.words.ext = function(input.text,
           input.text = tolower(input.text)
         }
       # replacing non-ASCII apostrophes with simple ' (standard ASCII char)
-      tokenized.text = gsub(iconv("\u2019",from="UTF-8"),"'",input.text)
+#### TEMPORARILY SWITCHED OFF, due to CRAN restrictions
+#### [test for: any(grep("UTF-8", sessionInfo()))
+####      tokenized.text = gsub(iconv("\u2019",from="UTF-8"),"'",input.text)
+tokenized.text = input.text
       # getting rid of contractions ('t, 's, 've, 'd, 'll, 'em, 'im) by 
       # replacing their apostrophes with ^ (other apostrophes will not 
       # be replaced); of course, if your corpus is Cockney, you should edit 

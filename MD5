@@ -1,4 +1,4 @@
-0b4216626377caddb009674b57f88642 *DESCRIPTION
+cbbb38f2dffdd4271ce0aa78d32b0250 *DESCRIPTION
 146194600cb074967a07321063898a4b *NAMESPACE
 cba4405a667b46fa39207fc7ac64c607 *NEWS
 4eaec1d0bfc2ade970699b3fca390caa *R/assign.plot.colors.R
@@ -41,7 +41,7 @@ be7c00c4af999e30af92ef1d30922d80 *R/stylo.default.settings.R
 a19dda52d1add5df8182c5470ccf71cf *R/summary.stylo.results.R
 f9a31a0198707dab7ebd910035fe7e0f *R/txt.to.features.R
 ead28b6c3c2e7d8c86bc02e742df91cc *R/txt.to.words.R
-029f024b41de2bbf79350586b8cecb74 *R/txt.to.words.ext.R
+a44290b39337f5a9441b0b1631f7a109 *R/txt.to.words.ext.R
 f4d14bd1838f6d2e30467074789df5b7 *R/zeta.chisquare.R
 c2d186d319109f318b553d28ca4e1b37 *R/zeta.craig.R
 4f718e3b64dcdc8fcace6b4d0cb6b59e *R/zeta.eder.R
@@ -60,7 +60,7 @@ a99852ab36f1584fdb6ad37ff70e30f4 *man/gui.oppose.Rd
 1ca602f97f0f6e290770f5bfff005494 *man/gui.stylo.Rd
 154107d5347f805d228d3541e894fc70 *man/load.corpus.Rd
 7a3ad72c8f8987af8b3dda7708bddf7f *man/load.corpus.and.parse.Rd
-ded5d456de95b41721c7c9000b4c9c24 *man/make.frequency.list.Rd
+530e1c80ad7b95a409b7a240de379dd5 *man/make.frequency.list.Rd
 ca515fb53725ee43f916a2a244587583 *man/make.ngrams.Rd
 194ae2247c263bd2c3c00b26e1d75489 *man/make.samples.Rd
 80e60f9e1a6c3d6f5b1d8f293d98926e *man/make.table.of.frequencies.Rd
