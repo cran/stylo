@@ -20,6 +20,7 @@ importFrom(stats, as.dendrogram, as.dist, biplot, chisq.test, cmdscale,
              wilcox.test)
 importFrom(utils, head, read.table, write.csv, write.table)
 
+
 export(
   assign.plot.colors,
   classify,
@@ -41,6 +42,7 @@ export(
   make.samples,
   make.table.of.frequencies,
   oppose,
+  parse.corpus,
   parse.pos.tags,
   perform.culling,
   perform.delta,

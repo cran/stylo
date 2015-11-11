@@ -53,7 +53,7 @@ text = "Mr. Sherlock Holmes, who was usually very late in the mornings,
 # this text can be converted into vector of words:
 words = txt.to.words(text)
 
-# an advanced tokenizer is available via the function 'txt.to.words.ext':
+# an avanced tokenizer is available via the function 'txt.to.words.ext':
 words2 = txt.to.words.ext(text, language = "English.all")
 
 # a frequency list (just words):

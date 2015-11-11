@@ -15,23 +15,22 @@
 # (ii) a vector of words to be excluded
 # #################################################
 
-delete.stop.words <- 
-function(input.data, stop.words = NULL) {
+delete.stop.words =  function(input.data, stop.words = NULL) {
         
         # is input.data a matrix? a data frame?
-        if(is.matrix(input.data == TRUE) | is.data.frame(input.data) == TRUE) {        
+        if(is.matrix(input.data) == TRUE | is.data.frame(input.data) == TRUE) {        
                 
                 # checking if any variables' names exist
                 if(length(colnames(input.data)) < 1) {
-                        cat("stop word deletion could not be performed:\n")
-                        cat("data table does not contain names\n")
+                        warning(paste("stop word deletion could not be performed:",
+                           "\n", "data table does not contain names\n"))
 
                 }
                 # checking if the stop words match (any) variables' names
                 if(length(stop.words) > 0 && 
                 length(intersect(colnames(input.data), stop.words)) == 0) {
-                        cat("chosen stop words were not found in the dataset;\n")
-                        cat("please check the language, lower/uppercase issues, etc.\n")
+                        warning(paste("chosen stop words were not found in the dataset;",
+                        "\n", " please check the language, lower/uppercase issues, etc.\n"))                        
                 }
 
                 # extracting only those columns that match the remaining names
@@ -43,16 +42,32 @@ function(input.data, stop.words = NULL) {
                 # checking if the stop words match (any) variables' names
                 if(length(stop.words) > 0 && 
                 length(intersect(input.data, stop.words)) == 0) {
-                        cat("chosen stop words were not found in the dataset;\n")
-                        cat("please check the language, lower/uppercase issues, etc.\n")                        
+                        warning(paste("chosen stop words were not found in the dataset;",
+                        "\n", " please check the language, lower/uppercase issues, etc.\n"))                        
                 }
 
                 # extracting only those elements that match the remaining names
                 culled.data = input.data[!(input.data %in% stop.words)]
                 
+        # is input.data a list?
+        } else if(class(input.data) == "stylo.corpus") {
+
+                # checking if the stop words match (any) variables' names
+              #  if(length(stop.words) > 0 && 
+              #  length(intersect(input.data, stop.words)) == 0) {
+              #          warning(paste("chosen stop words were not found in the dataset;",
+              #          "\n", " please check the language, lower/uppercase issues, etc.\n"))                        
+              #  }
+
+                # function for extracting the desired words
+                extract.words = function(x, words) x[!(x %in% words)] 
+                # and the procedure of extracting the words itself
+                culled.data = lapply(input.data, extract.words, words = stop.words)
+                class(culled.data) = "stylo.corpus"
+                
         } else {
-                cat("chosen stop words could not be applied to the dataset:\n")
-                cat("unrecognized data structure\n")
+                warning(paste("chosen stop words could not be applied to the dataset:",
+                          "\n"," unrecognized data structure\n"))
                 culled.data = NULL
         }
 
