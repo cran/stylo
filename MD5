@@ -1,4 +1,4 @@
-fd5deddc81beb90b37e86bcab3d1a762 *DESCRIPTION
+a00af12dd60948408d609da1e7686df1 *DESCRIPTION
 95a035129e5e6f1b3a248ae99566cd08 *NAMESPACE
 d5656fa81d8461dc20e0a296dd60e5bc *NEWS
 4eaec1d0bfc2ade970699b3fca390caa *R/assign.plot.colors.R
@@ -22,7 +22,7 @@ dc426c7f44c523d93e0b888425faa20d *R/make.frequency.list.R
 a29b460687c8a52c8b2146bc64a5e3ce *R/make.frequency.list.optimized.R
 25c40c649080db051c23bc197c6df645 *R/make.ngrams.R
 d52604deb2c3cb6d8e9574a16507c55d *R/make.samples.R
-aa30e88a984a13de4b90941a7cc99ff6 *R/make.table.of.frequencies.R
+0264162d4371a3ee2104a4f25c1a38f4 *R/make.table.of.frequencies.R
 c227bbc55a0f07767288374683e6f1d8 *R/oppose.R
 f37a64e3375b985afa897307d5e27306 *R/parse.corpus.R
 511e18adbd45ebfd867f26134a4c2848 *R/parse.pos.tags.R
