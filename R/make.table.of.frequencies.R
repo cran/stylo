@@ -24,6 +24,9 @@ make.table.of.frequencies = function(corpus,
                                      relative = TRUE) {
 
 
+  # factorizing the features: this increases the speed radically:
+  current.levels = features
+  features = factor(features, levels = current.levels, ordered = TRUE)
 
   # variable initialization
   frequency.table = c()
@@ -42,7 +45,7 @@ make.table.of.frequencies = function(corpus,
   for(i in 1:length(corpus)) {
     message(sprintf("%7s", i), appendLF = FALSE)
     # loading the next sample (= next item) from the corpus
-    current.sample = corpus[[i]]
+    current.sample = factor(corpus[[i]], levels = current.levels)
     # preparing the frequency list of the current sample
     if(relative == TRUE) {
       # either relative frequencies...
@@ -65,6 +68,9 @@ make.table.of.frequencies = function(corpus,
   frequency.table = sapply(mget(grep("vector_of_freqs_", ls(), value=T)), rbind)
   frequency.table = t(frequency.table)  
 
+  # un-factoring features
+  features = as.character(features)
+  
   # adjusting names of the samples
   rownames(frequency.table) = names(corpus)
   colnames(frequency.table) = features
@@ -89,6 +95,11 @@ make.table.of.frequencies = function(corpus,
   if(length(frequency.table) == 0) {
     stop("something must be wrong with the words/features you want to analyze")
   }
+  # assign a class
+  class(frequency.table) = "stylo.data"
+  # adding some information about the current function call
+  # to the final list of results
+  attr(frequency.table, "call") = match.call()
 # the result of the function
 return(frequency.table)
 }
