@@ -1,8 +1,8 @@
 Package: stylo
 Type: Package
 Title: Functions for a Variety of Stylometric Analyses
-Version: 0.6.3
-Date: 2015-12-20
+Version: 0.6.4
+Date: 2016-10-22
 Author: Maciej Eder, Jan Rybicki, Mike Kestemont
 Maintainer: Maciej Eder <maciejeder@gmail.com>
 URL: https://sites.google.com/site/computationalstylistics/
@@ -12,6 +12,6 @@ Suggests: stringi
 Description: A number of functions, supplemented by GUI, to perform various analyses in the field of computational stylistics, authorship attribution, etc.
 License: GPL (>= 3)
 NeedsCompilation: no
-Packaged: 2015-12-20 12:23:03 UTC; m
+Packaged: 2016-10-23 07:40:08 UTC; m
 Repository: CRAN
-Date/Publication: 2015-12-20 15:34:48
+Date/Publication: 2016-10-23 13:15:20
