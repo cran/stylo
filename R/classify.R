@@ -165,7 +165,7 @@ custom.graph.title = variables$custom.graph.title
 show.features = variables$show.features
 
 
-# ['cv' is temporarily switched off, it always performs 'cv ="thorough"']
+# ['cv' is temporarily switched off, it always performs 'cv ="stratified"']
 # cv = variables$cv
 
 
@@ -1111,10 +1111,8 @@ if(tolower(classification.method) == "delta") {
                                 test.set = secondary.set[,1:mfw],
                                 distance = distance.measure,
                                 z.scores.both.sets = z.scores.of.all.samples)
-#
-# this should be provided by the function perform.delta (value: list of objects)
-#distance.table = "sorry! temporarily out of order"
-#
+  distance.table = attr(classification.results, "distance.table")
+
 }
 
 
@@ -1142,7 +1140,6 @@ if(tolower(classification.method) == "nsc") {
                                        test.set = secondary.set[,1:mfw], 
                                        show.features = show.features)
 }
-
 
 
 
@@ -1272,6 +1269,7 @@ if(cv.folds > 0) {
                                    test.set, 
                                    distance = distance.measure,
                                    z.scores.both.sets = z.scores.of.all.samples)
+    distance.table = attr(classification.results, "distance.table")
   }
   if(tolower(classification.method) == "knn") {
     classification.results = perform.knn(training.set, test.set, k.value)
@@ -1287,6 +1285,7 @@ if(cv.folds > 0) {
     classification.results = perform.naivebayes(training.set, test.set)
   }
 
+  
   
   # retrieving classes of the new training set
   classes.training = gsub("_.*","",rownames(training.set))
@@ -1385,6 +1384,20 @@ if(save.analyzed.freqs == TRUE) {
 
 
 
+
+
+
+
+
+#######
+####### the features, confusion matrices, etc., should be captured here!!!!!!
+#######
+
+
+
+
+
+
 }    # <-- the internal loop for(i) returns here
 # #################################################
 
@@ -1438,7 +1451,7 @@ cat("\n")
 # in ver. 0.0.1 of the script, which provided just a basic Delta test
 # with no additional options. Since it is quite a lot of work to modernize 
 # the variables' names in the code (and parhaps it is too late now...), 
-# this simple wrappers will rename at least the exported variables:
+# these simple wrappers will rename at least the variables to be exported:
 success.rate = all.guesses
   if(length(success.rate) >1) {
     overall.success.rate = mean(all.guesses)
@@ -1446,7 +1459,6 @@ success.rate = all.guesses
 frequencies.training.set = freq.I.set.0.culling
 frequencies.test.set = freq.II.set.0.culling
 frequencies.both.sets = freq.table.both.sets
-#zscores.both.sets = zscores.table.both.sets
 features.actually.used = colnames(freq.table.both.sets[,1:mfw])
 features = mfw.list.of.all
 
@@ -1470,8 +1482,7 @@ distinctive.features = attr(classification.results, "features")
 
 
 if(exists("misclassified.samples")) {
-  attr(misclassified.samples, "description") = "............"
-#  class(misclassified.samples) = "stylo.data"
+  attr(misclassified.samples, "description") = "texts (samples) that were not correctly classified"
 }
 if(exists("cross.validation.summary") & length(cross.validation.summary) >0 ) {
   attr(cross.validation.summary, "description") = "correctly guessed samples (cross-validation folds)"
@@ -1491,10 +1502,8 @@ if(exists("distance.table")) {
   attr(distance.table, "description") = "final distances between each pair of samples"
   class(distance.table) = "stylo.data"
 }
-if(exists("distinctive.features") & length(distinctive.features) >0) {
-  attr(distinctive.features, "description") = "most discriminative features"
-# this sucks
-#  class(nsc.distinctive.features) = "stylo.data"
+if(exists("distinctive.features") & length(distinctive.features) > 0) {
+  attr(distinctive.features, "description") = "most distinctive features"
 }
 if(exists("frequencies.both.sets")) {
   attr(frequencies.both.sets, "description") = "frequencies of words/features accross the corpus"

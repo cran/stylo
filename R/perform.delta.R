@@ -79,7 +79,8 @@ input.freq.table = rbind(training.set, test.set)
 
 supported.measures = c("dist.euclidean", "dist.manhattan", "dist.canberra",
                        "dist.delta", "dist.eder", "dist.argamon",
-                       "dist.simple", "dist.cosine")
+                       "dist.simple", "dist.cosine", "dist.wurzburg",
+                       "dist.entropy", "dist.minmax")
 
 
 
@@ -113,12 +114,17 @@ if(length(grep(distance, supported.measures)) > 1 ) {
          distance = gsub("dist.", "", distance)
          # apply a standard distance, using the generic dist() function
          distance.table = as.matrix(dist(input.freq.table, method = distance))
-    # then, check for the non-standard methods but still supported by Stylo
-    } else if(distance %in% c("dist.simple", "dist.cosine")) {
+    # then, check for the non-standard methods but still supported by 'stylo':
+    } else if(distance %in% c("dist.simple", "dist.cosine", "dist.entropy", "dist.minmax")) {
 
          # invoke one of the distance measures functions from Stylo    
          distance.table = do.call(distance, list(x = input.freq.table))
     
+    } else if(distance == "dist.wurzburg") {
+
+         # invoke one of the distance measures functions from Stylo    
+         distance.table = do.call(distance, list(x = zscores.table.both.sets))
+        
     } else {
          # invoke one of the distances supported by 'stylo'; this is slightly
          # different from the custom functions invoked above, since it uses
@@ -126,7 +132,7 @@ if(length(grep(distance, supported.measures)) > 1 ) {
          distance.table = do.call(distance, list(x = zscores.table.both.sets, scale = FALSE))
     }
     
-} 
+}
 
 # convert the table to the format of matrix
 distance.table = as.matrix(distance.table)
