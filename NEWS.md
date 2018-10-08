@@ -1,8 +1,16 @@
 ## stylo news ##
 
+
+### version 0.6.8, 2018/06/14
+  * support for JCK (Japanese-Chinese-Korean) significantly improved
+  * a fix for exporting networks to Gephi ver. 0.9.2
+  * support for rmarkdown: stylo(), classify(), oppose()
+
+
 ### version 0.6.7, 2018/05/12
   * supports the following taggers: TaKIPI (for Polish), Alpino (Dutch)
   * the Imposters method reimplemented, via the new function imposters()
+  * fine tuning the parameters of the Imposters method via imposters.optimize()
 
 
 ### version 0.6.6, 2018/04/13
@@ -423,7 +431,7 @@
     Leipzig, Germany (26-31/08/2009)}
  
     
-### 0.1.4, 2009/07/19
+### version 0.1.4, 2009/07/19
   * loop for different MFW settings
 
   
