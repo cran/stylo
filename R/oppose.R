@@ -1,7 +1,7 @@
 
 
 
-oppose = function(gui = TRUE, 
+oppose = function(gui = TRUE,
              path = NULL,
              primary.corpus = NULL,
              secondary.corpus = NULL,
@@ -26,7 +26,7 @@ svm.classification = F
 corpus.exists = F
 
 
-                 
+
 # if any command-line arguments have been passed by a user, they will
 # be stored on the following list and used to overwrite the defaults
 passed.arguments = list(...)
@@ -53,11 +53,6 @@ if(is.character(path) == TRUE & length(path) > 0) {
   message("using current directory...")
 }
 
-
-
-
-
-
 # loading the default settings as defined in the following function
 # (it absorbes the arguments passed from command-line)
 variables = stylo.default.settings(...)
@@ -77,8 +72,8 @@ stage.II.similarity.test = TRUE
 if (gui == TRUE) {
       # first, checking if the GUI can be displayed
       # (the conditional expression is stolen form the generic function "menu")
-      if (.Platform$OS.type == "windows" || .Platform$GUI == 
-            "AQUA" || (capabilities("tcltk") && capabilities("X11") && 
+      if (.Platform$OS.type == "windows" || .Platform$GUI ==
+            "AQUA" || (capabilities("tcltk") && capabilities("X11") &&
             suppressWarnings(tcltk::.TkUp))) {
         variables = gui.oppose(...)
       } else {
@@ -218,8 +213,8 @@ if(is.null(custom.graph.title) == FALSE) {
 
 
 
-# If the tables with frequencies could not loaded so far (for any reason), 
-# try to load an external corpus (R object) passed as an argument 
+# If the tables with frequencies could not loaded so far (for any reason),
+# try to load an external corpus (R object) passed as an argument
 
 ###############################################################################
 # Checking if the argument "training.corpus" and/or "test.corpus" has been used
@@ -254,7 +249,7 @@ for(iteration in 1:2) {
         message("The samples (elements of the list) should have their names.")
         message("Alternatively, try to build your corpus from text files (default).\n")
         stop("Wrong corpus format")
-      } 
+      }
   }
 
   # 1st iteration: setting the matrix containing the training set (if applicable)
@@ -266,12 +261,12 @@ for(iteration in 1:2) {
     corpus.of.secondary.set = parsed.corpus
   }
 # attempts at loading the training set and the test set: the loop returns here
-} 
+}
 
 # Two iterations completed, another sanity check should be applied
 if(corpus.exists == FALSE) {
     if(length(corpus.of.primary.set) >1 & length(corpus.of.secondary.set) >1 ) {
-      message("Two subcorpora loaded successfully.")  
+      message("Two subcorpora loaded successfully.")
       corpus.exists = TRUE
     } else {
       message("The subcorpora will be loaded from text files...")
@@ -291,18 +286,18 @@ if(corpus.exists == FALSE) {
 
 # if pre-processed corpora from R objects could not be loaded, then use files
 if(corpus.exists == FALSE) {
-        
-        
-        
-  # Retrieving the names of samples
-  #
-  filenames.primary.set = list.files(primary.corpus.dir)
-  filenames.secondary.set = list.files(secondary.corpus.dir)
-
+ 
   # Checking whether required files and subdirectories exist
+  # First check: allow user to choose a suitable folder via GUI
+  if(file.exists(primary.corpus.dir) == FALSE | file.exists(secondary.corpus.dir) == FALSE) {
+    selected.path = tk_choose.dir(caption = "Select your working directory. It should two subdirectories called *primary_set* and *secondary_set*")
+    setwd(selected.path)
+  }
+
+  # If the user failed to provide a suitable folder at this point, abort.
   if(file.exists(primary.corpus.dir) == FALSE | file.exists(secondary.corpus.dir) == FALSE) {
     message("\n\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
-        "Working directory should contain two subdirectories: 
+        "Working directory should contain two subdirectories:
         \"", primary.corpus.dir, "\" and \"", secondary.corpus.dir, "\"\n",
         "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", sep = "")
     # back to the original working directory
@@ -310,6 +305,12 @@ if(corpus.exists == FALSE) {
     # error message
     stop("corpus prepared incorrectly")
   }
+  
+  # Retrieving the names of samples
+  #
+  filenames.primary.set = list.files(primary.corpus.dir)
+  filenames.secondary.set = list.files(secondary.corpus.dir)
+  
   # Checking if the subdirectories contain any stuff
   if(length(filenames.primary.set) <2 | length(filenames.secondary.set) <2) {
     message("\n\n", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",
@@ -356,7 +357,7 @@ if(corpus.exists == FALSE) {
 
 
 
-  # We need a list of the most frequent words used in the current corpus, 
+  # We need a list of the most frequent words used in the current corpus,
   # in descendent order, without frequencies (just a list of words).
   wordlist.raw = sort(table( c(unlist(corpus.of.primary.set),
                           unlist(corpus.of.secondary.set))), decreasing=TRUE)
@@ -369,22 +370,22 @@ if(corpus.exists == FALSE) {
   wordlist = names(wordlist.raw)
 
 
-  
-  
+
+
 
 # blank line on the screen
 
 message("")
 message("Slicing the texts into samples...")
 
-primary.slices = make.samples(corpus.of.primary.set, 
+primary.slices = make.samples(corpus.of.primary.set,
                               sample.size = text.slice.length,
-                              sample.overlap = text.slice.overlap, 
+                              sample.overlap = text.slice.overlap,
                               sampling = "normal.sampling")
-                              
-secondary.slices = make.samples(corpus.of.secondary.set, 
+
+secondary.slices = make.samples(corpus.of.secondary.set,
                               sample.size = text.slice.length,
-                              sample.overlap = text.slice.overlap, 
+                              sample.overlap = text.slice.overlap,
                               sampling = "normal.sampling")
 
 # ###############################################################
@@ -406,12 +407,12 @@ message("Primary set...")
 
 # iterating over the samples and slices, checking them agains the wordlist
 # do.call() is a game-changer here, in terms of the computation time (5x or so)
-table.primary.set = do.call(rbind, 
+table.primary.set = do.call(rbind,
              lapply(primary.slices, function(x) as.numeric(wordlist %in% x)))
 #table.primary.set = t(table.primary.set)
 colnames(table.primary.set) = wordlist
 
-# adding the counts for particular slices, computing percentage of slices 
+# adding the counts for particular slices, computing percentage of slices
 # that contain words from the wordlist
 comparison.primary = colSums(table.primary.set)/length(primary.slices)*100
 names(comparison.primary) = wordlist
@@ -422,7 +423,7 @@ message("Secondary set...\n\n")
 
 # iterating over the samples and slices, checking them agains the wordlist
 # do.call() is a game-changer here, in terms of the computation time (5x or so)
-table.secondary.set = do.call(rbind, 
+table.secondary.set = do.call(rbind,
              lapply(secondary.slices, function(x) as.numeric(wordlist %in% x)))
 #table.secondary.set = t(table.secondary.set)
 colnames(table.secondary.set) = wordlist
@@ -430,7 +431,7 @@ colnames(table.secondary.set) = wordlist
 #table.secondary.set = t(table.secondary.set)
 colnames(table.secondary.set) = wordlist
 
-# adding the counts for particular slices, computing percentage of slices 
+# adding the counts for particular slices, computing percentage of slices
 # that contain words from the wordlist
 comparison.secondary = colSums(table.secondary.set)/length(secondary.slices)*100
 names(comparison.secondary) = wordlist
@@ -460,12 +461,12 @@ message("comparison done!\n")
 # Finally, we want to save some of the variable values for later use;
 # they are automatically loaded into the GUI at the next run of the script.
 cat("", file = "oppose_config.txt", append = FALSE)
-var.name = function(x) { 
+var.name = function(x) {
     if(is.character(x) == TRUE) {
         cat(paste(deparse(substitute(x)), " = \"", x, "\"", sep = ""), file = "oppose_config.txt", sep = "\n", append = TRUE)
     } else {
         cat(paste(deparse(substitute(x)), x, sep = " = "), file = "oppose_config.txt", sep = "\n", append = TRUE) }
-    } 
+    }
 var.name(text.slice.length)
 var.name(text.slice.overlap)
 var.name(rare.occurrences.threshold)
@@ -502,7 +503,7 @@ if (oppose.method == "box.plot"){
                 token_hit_counter = 0
                 for (t in slice){
                         if (t == plot.token){
-                                token_hit_counter = token_hit_counter+1 
+                                token_hit_counter = token_hit_counter+1
                         }
                 }
                 if (token_hit_counter > 0){
@@ -516,7 +517,7 @@ if (oppose.method == "box.plot"){
                 token_hit_counter = 0
                 for (t in slice){
                         if (t == plot.token){
-                                token_hit_counter = token_hit_counter+1 
+                                token_hit_counter = token_hit_counter+1
                         }
                 }
                 if (token_hit_counter > 0){
@@ -525,9 +526,9 @@ if (oppose.method == "box.plot"){
                 counts = c(counts, token_hit_counter)
                 categories = c(categories, "Secondary")
         }
-        
+
         graph.title = paste('Boxplot for \"', plot.token, '\"', sep="")
-        
+
         plot.current.task = function(){
                 boxplot.matrix = data.frame(COUNT=counts, CATEGORY=categories)
                 name_prim = paste("Primary (", present_in_primary, "/", length(primary.slices), ")", sep="")
@@ -592,7 +593,7 @@ if (oppose.method == "mann.whitney"){
         print(top_words)
         tail_words = rev(statistics[(length(statistics)-tail):length(statistics)])
         print(tail_words)
-        
+
 words.preferred.by.primary.author = names(top_words)
 words.avoided.by.primary.author = names(tail_words)
 
@@ -657,7 +658,7 @@ if (oppose.method != "box.plot"){
 cat("# The file contains words that were extracted in the oppose script:",
   "# this subset lists words significantly PREFERRED by primary author(s).",
   "# The list can be used as an input wordlist for other methods, and for this",
-  "# purpose it can be manually revised, edited, deleted, culled, etc.", 
+  "# purpose it can be manually revised, edited, deleted, culled, etc.",
   "# You can either delete unwanted words, or mark them with \"#\"",
   "# -----------------------------------------------------------------------",
   "",
@@ -673,14 +674,14 @@ cat("# The file contains words that were extracted in the oppose script:",
 cat(data.to.be.saved, file = "words_preferred.txt", sep = "\n", append = TRUE)
 #
 #
-# 
+#
 
 
 # some comments into the file containing worlist
 cat("# The file contains words that were extracted in Burrows' Zeta test:",
   "# this subset lists words significantly AVOIDED by primary author(s).",
   "# The list can be used as an input wordlist for other methods, and for this",
-  "# purpose it can be manually revised, edited, deleted, culled, etc.", 
+  "# purpose it can be manually revised, edited, deleted, culled, etc.",
   "# You can either delete unwanted words, or mark them with \"#\"",
   "# -----------------------------------------------------------------------",
   "",
@@ -695,7 +696,7 @@ cat("# The file contains words that were extracted in Burrows' Zeta test:",
 # writing the stuff
 cat(data.to.be.saved, file = "words_avoided.txt", sep = "\n", append = TRUE)
 #
-# 
+#
 }
 #} # <---- the first stage of the analysis is completed
 
@@ -705,7 +706,7 @@ cat(data.to.be.saved, file = "words_avoided.txt", sep = "\n", append = TRUE)
 
 
 
-         
+
 
 # plotting functionality:
 
@@ -729,7 +730,7 @@ if (visualization == "words" | visualization == "markers"){
 
 
 if (visualization == "words" && oppose.method != "box.plot"){
-        
+
         # only a portion of discinctive words (e.g. 70) will be plotted
         if(length(names(words.preferred)) > 70) {
                 preferred.words.for.plotting = names(words.preferred)[1:70]
@@ -751,28 +752,28 @@ if (visualization == "words" && oppose.method != "box.plot"){
                 avoided.scores.for.plotting = words.avoided
         }
 
-        
+
 
 
         plot.current.task = function(){
                 plot(preferred.indices.for.plotting, preferred.scores.for.plotting, ylim=c(-1,1), type="n", xlab="Rank of the item", ylab="Score")
                 text(preferred.indices.for.plotting, preferred.scores.for.plotting, as.character(preferred.words.for.plotting), cex=0.7, srt=90, adj=c(0,0))
                 text(avoided.indices.for.plotting, avoided.scores.for.plotting, as.character(avoided.words.for.plotting), cex=0.7, srt=90, adj=c(1,0))
-                abline(h=0, lty=2)      
+                abline(h=0, lty=2)
                 mtext("Preferred", side = 4, at = 0.5, las = 3)
                 mtext("Avoided", side = 4, at = -0.5)
                 title(main = graph.title)
         }
-        
+
         if(titles.on.graph == TRUE) {
                 graph.title = paste(graph.title,"\n",long.method.name)
         } else {
-        graph.title = ""}        
+        graph.title = ""}
         if(display.on.screen == TRUE){
                 plot.current.task()
         }
         # check if a custom filename has been set
-        if(is.character(custom.graph.filename) == TRUE & 
+        if(is.character(custom.graph.filename) == TRUE &
                length(custom.graph.filename) > 0) {
           # if a custom file name exists, then use it
           graph.filename = custom.graph.filename
@@ -780,7 +781,7 @@ if (visualization == "words" && oppose.method != "box.plot"){
           graph.filename <- paste(basename(getwd()),short.method.name, sep="_")
         }
         if(write.png.file == TRUE) {
-                png(filename = paste(graph.filename,"%03d.png",sep="_"), 
+                png(filename = paste(graph.filename,"%03d.png",sep="_"),
                 width=7,height=7,res=300, units="in")
                 plot.current.task()
         dev.off()}
@@ -825,17 +826,17 @@ filenames.test.set = list.files(test.corpus.dir)
                          features = analyzed.features,
                          ngram.size = ngram.size)
 
-                         
-  test.slices = make.samples(corpus.of.test.set, 
+
+  test.slices = make.samples(corpus.of.test.set,
                               sample.size = text.slice.length,
-                              sample.overlap = text.slice.overlap, 
+                              sample.overlap = text.slice.overlap,
                               sampling = "normal.sampling")
 
 #
 # blank line on the screen
 message("")
 #
-}                       
+}
 } else {
 message("No test set samples found\n",
     "Performing a simple comparison of the training samples...")
@@ -866,23 +867,23 @@ if(file.exists(test.corpus.dir) == TRUE) {
 for(i in 1 : loop.size) {
 
         labels = c("primary","secondary","unknown")
-       
+
         if(i == 1) {
-                current.corpus = primary.slices 
-        } 
+                current.corpus = primary.slices
+        }
         if(i == 2) {
                 current.corpus = secondary.slices
         }
         if(i == 3) {
                 current.corpus = test.slices
         }
-        
-        
-        
-        preferred = lapply(current.corpus, function(x) as.numeric(words.preferred.by.primary.author %in% x))        
-        avoided = lapply(current.corpus, function(x) as.numeric(words.avoided.by.primary.author %in% x))        
+
+
+
+        preferred = lapply(current.corpus, function(x) as.numeric(words.preferred.by.primary.author %in% x))
+        avoided = lapply(current.corpus, function(x) as.numeric(words.avoided.by.primary.author %in% x))
         y.coord = unlist(lapply(preferred, function(x) {sum(x)/length(x)*100}))
-        x.coord = unlist(lapply(avoided, function(x) {sum(x)/length(x)*100}))        
+        x.coord = unlist(lapply(avoided, function(x) {sum(x)/length(x)*100}))
         current.corpus.scores = cbind(x.coord, y.coord, labels[i])
 
         summary.zeta.scores = rbind(summary.zeta.scores,current.corpus.scores)
@@ -906,7 +907,7 @@ colnames(summary.zeta.scores) = c("preferred","avoided","class")
 if ((visualization == "markers") && (oppose.method != "box.plot")){
   # a tiny module for graph auto-coloring (copied from "Delta test 0.4.1")
   # NOTE: in ver. 0.4.8, this module has been turned to R function, and improved
-  # 
+  #
   if(use.color.graphs == TRUE) {
   color.numeric.values = c(1)
   current.color = 1
@@ -920,10 +921,10 @@ if ((visualization == "markers") && (oppose.method != "box.plot")){
                            ),10)
   #
   for(w in 2:length(names.of.the.texts)) {
-      if(gsub("_.*","",names.of.the.texts)[w] 
-         %in% 
+      if(gsub("_.*","",names.of.the.texts)[w]
+         %in%
          gsub("_.*","",names.of.the.texts[1:(w-1)]) == TRUE) {
-         find.color = which(gsub("_.*","",names.of.the.texts) == 
+         find.color = which(gsub("_.*","",names.of.the.texts) ==
                                gsub("_.*","",names.of.the.texts)[w])[1]
          current.color = color.numeric.values[find.color]
          }
@@ -933,21 +934,21 @@ if ((visualization == "markers") && (oppose.method != "box.plot")){
     color.numeric.values = c(color.numeric.values, current.color)
     }
   colors.of.pca.graph = available.colors[c(color.numeric.values)]
-    } 
+    }
     else {
   colors.of.pca.graph = "black"
   }
   # ########################################
   plot.current.task = function(){
     par(mar=c(4, 4, 4, 7)+.1, xpd=TRUE)
-    plot(summary.zeta.scores[,1:2], 
+    plot(summary.zeta.scores[,1:2],
          col = colors.of.pca.graph,
          pch = as.numeric(as.factor(summary.zeta.scores[,3])),
          xlab="antimarkers",
          ylab="markers"
          )
-    legend("right", unique(gsub("_.*","",rownames(summary.zeta.scores))), 
-        bty="n", text.col=unique(colors.of.pca.graph), 
+    legend("right", unique(gsub("_.*","",rownames(summary.zeta.scores))),
+        bty="n", text.col=unique(colors.of.pca.graph),
         fill=unique(colors.of.pca.graph), border="white", inset=-0.27)
     title(main=graph.title)
     par(xpd=F)
@@ -958,18 +959,18 @@ if ((visualization == "markers") && (oppose.method != "box.plot")){
   if(titles.on.graph == TRUE) {
     graph.title = paste(graph.title,"\n",long.method.name)
     } else {
-    graph.title = ""}    
+    graph.title = ""}
 
-    
+
 
   if(display.on.screen == TRUE){
   plot.current.task()
   }
 
 
-  
+
   # check if a custom filename has been set
-  if(is.character(custom.graph.filename) == TRUE & 
+  if(is.character(custom.graph.filename) == TRUE &
            length(custom.graph.filename) > 0) {
       # if a custom file name exists, then use it
       graph.filename = custom.graph.filename
@@ -979,7 +980,7 @@ if ((visualization == "markers") && (oppose.method != "box.plot")){
 
 
   if(write.png.file == TRUE) {
-  png(filename = paste(graph.filename,"%03d.png",sep="_"), 
+  png(filename = paste(graph.filename,"%03d.png",sep="_"),
            width=7,height=7,res=300, units="in")
   plot.current.task()
   dev.off()}
@@ -1018,7 +1019,7 @@ if (classification == TRUE && oppose.method != "box.plot") {
     #plot(final.probabilities[,2],type="h")
     # plotting all the samples, distinguished by color:
     if (visualization == "markers"){
-      plot(final.probabilities[,2],type="h", 
+      plot(final.probabilities[,2],type="h",
             col=c(rep(2,training.subset),rep(4,test.subset-training.subset)))
       }
     }
