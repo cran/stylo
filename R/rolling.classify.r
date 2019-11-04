@@ -218,7 +218,7 @@ if(length(save.plot.custom.height) > 0) {
 # If no language was chosen (or if a desired language is not supported, or if
 # there was a spelling mistake), then the variable will be set to "English".
 
-pronouns = stylo.pronouns(language=corpus.lang)
+pronouns = stylo.pronouns(corpus.lang = corpus.lang)
 
 
 # Since it it not so easy to perform, say, 17.9 iterations, or analyze
@@ -549,7 +549,7 @@ corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
                            corpus.dir = test.corpus.dir,
                            encoding = encoding,
                            markup.type = corpus.format,
-                           language = corpus.lang,
+                           corpus.lang = corpus.lang,
                            splitting.rule = splitting.rule,
                            preserve.case = preserve.case,
                            sampling = "no.sampling"
@@ -560,11 +560,11 @@ text.length = length(corpus.of.secondary.set[[1]])
 
 
 # once more: loading the sample to be rolled through
-corpus.of.secondary.set = load.corpus.and.parse(files=filenames.secondary.set,
+corpus.of.secondary.set = load.corpus.and.parse(files = filenames.secondary.set,
                            corpus.dir = test.corpus.dir,
                            encoding = encoding,
                            markup.type = corpus.format,
-                           language = corpus.lang,
+                           corpus.lang = corpus.lang,
                            splitting.rule = splitting.rule,
                            preserve.case = preserve.case,
                            sample.size = slice.size,
@@ -581,7 +581,7 @@ corpus.of.primary.set = load.corpus.and.parse(files = filenames.primary.set,
                            corpus.dir = training.corpus.dir,
                            encoding = encoding,
                            markup.type = corpus.format,
-                           language = corpus.lang,
+                           corpus.lang = corpus.lang,
                            splitting.rule = splitting.rule,
                            preserve.case = preserve.case,
                            sample.size = slice.size,

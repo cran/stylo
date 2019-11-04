@@ -1,7 +1,7 @@
 
 
 import(
-  tcltk, 
+  tcltk,
   tcltk2, 
   ape, 
   pamr, 
@@ -11,14 +11,15 @@ import(
   tsne
 )
 
-importFrom(grDevices, dev.off, gray, jpeg, pdf, png, rgb, svg)
+importFrom(grDevices, dev.off, gray, jpeg, pdf, png, rgb, svg, gray.colors, hsv)
 importFrom(graphics, abline, arrows, axis, barplot, box, boxplot, 
              layout, legend, lines, mtext, par, plot, polygon, rect, 
-             segments, text, title)
+             segments, text, title, points)
 importFrom(stats, as.dendrogram, as.dist, biplot, chisq.test, cmdscale, 
              dendrapply, dist, hclust, is.leaf, prcomp, predict, sd, 
              wilcox.test)
 importFrom(utils, head, read.table, read.csv, write.csv, write.table)
+# importFrom(foreach, foreach, '%dopar%')
 
 
 export(
@@ -59,8 +60,11 @@ export(
   perform.nsc,
   perform.svm,
   perform.impostors,
+  performance.measures,
+#  plot.sample.size,
   rolling.classify,
   rolling.delta,
+  size.penalize,
   stylo.default.settings,
   stylo.network,
   stylo.pronouns,
@@ -78,5 +82,6 @@ S3method(print, stylo.corpus)
 S3method(print, stylo.data)
 S3method(summary, stylo.results)
 S3method(summary, stylo.corpus)
+S3method(plot, sample.size)
 
 
