@@ -57,7 +57,7 @@ crossv = function(training.set,
     cv.misclassifications = list()
     
     predicted_classes = c()
-    actual_classes = c()
+    expected_classes = c()
     
     
     
@@ -167,24 +167,29 @@ crossv = function(training.set,
         
         # combining results for k folds
         predicted_classes = c(predicted_classes, classification.results)
-        actual_classes = c(actual_classes, cv.classes.test)
+        expected_classes = c(expected_classes, cv.classes.test)
         
         cross.validation.results = c(cross.validation.results, success.rate.cv)
-#        cv.confusion.matrix[[iterations]] = confusion.matrix
         cv.misclassifications[[iterations]] = misclassifications
     
     }
     
-    
-    confusion_matrix = table(actual_classes, predicted_classes)
+    classes_all = sort(unique(as.character(c(expected_classes, predicted_classes))))
+    predicted = factor(as.character(predicted_classes), levels = classes_all)
+    expected  = factor(as.character(expected_classes), levels = classes_all)
+    confusion_matrix = table(expected, predicted)
+
     
 #    # getting rid of classes that are not represented in the training set
-#    # by dropping the respecive columns (usually by anonymous authors)
+#    # by dropping the respective columns (usually by anonymous authors)
 #    confusion_matrix = confusion_matrix[,unique(predicted_classes)]
     
     
     attr(cross.validation.results, "confusion_matrix") = confusion_matrix
     attr(cross.validation.results, "misclassifications") = cv.misclassifications
+    attr(cross.validation.results, "predicted") = predicted_classes
+    attr(cross.validation.results, "expected") = expected_classes
+
     
     class(cross.validation.results) = "stylo.data"
     return(cross.validation.results)

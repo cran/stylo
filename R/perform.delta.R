@@ -175,10 +175,15 @@ for(h in 1:length(selected.dist[,1])) {
 
 # preparing a confusion table
 predicted_classes = classification.results
-actual_classes = classes.test.set
-confusion.matrix = table(predicted_classes, actual_classes)
+expected_classes = classes.test.set
+
+classes_all = sort(unique(as.character(c(expected_classes, predicted_classes))))
+predicted = factor(as.character(predicted_classes), levels = classes_all)
+expected  = factor(as.character(expected_classes), levels = classes_all)
+confusion_matrix = table(expected, predicted)
+
 # getting rid of the classes not represented in the training set (e.g. anonymous samples)
-# confusion.matrix = confusion.matrix[,rownames(confusion.matrix)]
+# confusion_matrix = confusion_matrix[,rownames(confusion_matrix)]
 
 
 names(classification.results) = rownames(test.set)
@@ -190,7 +195,7 @@ colnames(classification.scores) = 1:no.of.candidates
 attr(classification.results, "distance.table") = selected.dist
 attr(classification.results, "rankings") = classification.rankings
 attr(classification.results, "scores") = classification.scores
-attr(classification.results, "confusion_matrix") = confusion.matrix
+attr(classification.results, "confusion_matrix") = confusion_matrix
 
 
 return(classification.results)
