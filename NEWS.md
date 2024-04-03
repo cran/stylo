@@ -1,6 +1,14 @@
 ## 'stylo' news ##
 
 
+### version 0.7.5, 2024/04/02
+  * size.penalize() renamed to samplesize.penalize(), for CRAN
+  * bug in size.penalize() fixed
+  * improved performance of dist.minmax() 
+  * oppose() update, to allow having just one text per set
+  * a solid clean-up in a few functions
+  * several minor improvements here and there
+
 
 ### version 0.7.4, 2020/12/5
   * option for shading in rolling.classify() 
@@ -8,7 +16,7 @@
   * supervised classifiers updated, to be compliant with cross-validation
   * SVM output fixed
   * bugs in rolling.classify() fixed
-  * bugs in load.corpus() causing codepages mismatches fixed 
+  * bugs in load.corpus() causing codepage mismatches fixed 
   * general code cleanup
 
 

@@ -1056,7 +1056,7 @@ if(length(grep(distance.measure, supported.measures)) > 1 ) {
         # the function of the same name, with x as its argument
         distance.table = do.call(distance.measure, list(x = input.freq.table))
         # check if the invoked function did produce a distance
-        if(class(distance.table) != "dist") {
+        if(!inherits(distance.table, "dist")) {
             # say something nasty here, if it didn't:
             stop("it wasn't a real distance measure function applied, was it?")
         }
@@ -1115,10 +1115,10 @@ distance.table = as.matrix(distance.table)
 # and assign.plot.colors()"
 # #################################################
 
-groups = process.metadata(metadata = metadata, 
+groups = suppressMessages(process.metadata(metadata = metadata, 
                           filenames = rownames(table.with.all.freqs),
                           filename.column = filename.column,
-                          grouping.column = grouping.column)
+                          grouping.column = grouping.column))
 
 # using an appropriate function to assing colors to subsequent samples
 colors.of.pca.graph = assign.plot.colors(labels = groups,
@@ -1358,7 +1358,7 @@ if(analysis.type == "PCV" || analysis.type == "PCR") {
       for (c in rownames(pca.results$x)){
         labels = c(labels, gsub("_.*", "", c))
       }
-      COOR = data.frame(pca.results$x[,1:2], LABEL = labels)
+      COOR = data.frame(pca.results$x[,1:2], LABEL = labels, stringsAsFactors = TRUE)
       labels = c(levels(COOR$LABEL))
       # visualize
       sps = trellis.par.get("superpose.symbol")
