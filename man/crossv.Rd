@@ -90,9 +90,9 @@ matrices for particular cv folds (attr "confusion_matrix").
 }
 \examples{
 \dontrun{
+
 ## standard usage:
 crossv(training.set, test.set)
-}
 
 ## text categorization
 
@@ -136,7 +136,7 @@ test.classes = c(rep("s",25), rep("c",25), rep("v",25))
 crossv(train, test, cv.mode = "stratified", cv.folds = 10, 
        train.classes, test.classes)
 
-
+}
 
 }
 %\keyword{distance measure}
